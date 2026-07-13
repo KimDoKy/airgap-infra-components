@@ -1,0 +1,16 @@
+services:
+  jenkins:
+    image: ${JENKINS_IMAGE}
+    container_name: jenkins
+    restart: unless-stopped
+    user: "${JENKINS_UID}:${JENKINS_GID}"
+    environment:
+      - TZ=${TZ}
+      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Duser.timezone=${TZ}
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    ports:
+      - "${HTTP_PORT}:8080"
+      - "${AGENT_PORT}:50000"

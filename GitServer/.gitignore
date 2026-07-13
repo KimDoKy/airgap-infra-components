@@ -1,0 +1,4 @@
+images/*.tar
+images/*.tar.gz
+data/
+.env.bak

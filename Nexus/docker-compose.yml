@@ -1,0 +1,12 @@
+services:
+  nexus:
+    image: ${NEXUS_IMAGE}
+    container_name: nexus
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - INSTALL4J_ADD_VM_PARAMS=-Xms${NEXUS_MIN_HEAP} -Xmx${NEXUS_MAX_HEAP} -XX:MaxDirectMemorySize=2g
+    volumes:
+      - ./nexus-data:/nexus-data
+    ports:
+      - "${HTTP_PORT}:8081"

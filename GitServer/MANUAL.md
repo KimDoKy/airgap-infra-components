@@ -1,0 +1,144 @@
+# Gitea 구동 및 초기화 매뉴얼 (VM 관리자용)
+
+이 문서는 `GitServer/` 디렉터리 전체(이미지 tar.gz 포함)가 로컬 PC에서
+`scripts/02-transfer-to-vm.sh` 로 **이미 이 VM에 SSH 전송되어 있는 상태**를 전제로, VM에서
+수행할 작업만 다룹니다. 로컬 PC에서의 이미지 다운로드/전송 절차는 `README.md` 를 참고하세요.
+
+브라우저 접속 없이 CLI만으로 끝까지 진행합니다.
+
+---
+
+## 0. 체크리스트
+
+- [ ] `GitServer/` 디렉터리 전체가 이 VM에 존재 (`.env`, `docker-compose.yml`, `images/gitea-image.tar.gz`, `scripts/`)
+- [ ] Docker, Docker Compose 플러그인 설치됨 (`docker -v`, `docker compose version`) —
+      미설치 시 [../Docker/MANUAL.md](../Docker/MANUAL.md) 를 먼저 진행
+- [ ] `sudo` 권한 있음
+- [ ] 열어야 할 포트(기본 3000, 2222)에 대한 방화벽/보안그룹 허용
+
+## 1. 설정값 확인 (.env)
+
+```bash
+cd GitServer
+vi .env
+```
+
+배포 전 반드시 확인/변경할 항목:
+
+| 항목 | 설명 |
+|---|---|
+| `ADMIN_PASSWORD` | 초기 관리자 비밀번호. 기본값(`ChangeMe123!`) 그대로 두지 말 것 |
+| `GITEA_DOMAIN` | 이 VM의 실제 접속 주소(IP 또는 사내 도메인). clone URL 생성에 사용됨 |
+| `GITEA_ROOT_URL` | 위 도메인을 반영한 전체 URL (예: `http://<VM_IP>:3000/`) |
+| `HTTP_PORT` / `SSH_PORT` | 다른 서비스와 충돌 시에만 변경 |
+
+> `GITEA_SECRET_KEY` / `GITEA_INTERNAL_TOKEN` 은 빈 값으로 두세요. 3단계에서 자동 생성됩니다.
+
+## 2. 이미지 로드
+
+```bash
+./scripts/03-load-image.sh
+```
+
+`docker images` 목록에 `gitea/gitea` 가 보이면 정상입니다.
+
+## 3. 기동 + CLI 초기화
+
+```bash
+./scripts/04-start.sh
+```
+
+내부적으로 다음이 순서대로 실행됩니다.
+
+1. `./data` 생성 및 소유권(`USER_UID:USER_GID`) 설정
+2. `SECRET_KEY` / `INTERNAL_TOKEN` 생성 → `.env` 에 저장
+3. `docker compose up -d` — `INSTALL_LOCK=true` 이므로 브라우저 설치 화면 자체가 나타나지 않음
+4. 컨테이너가 준비되면 `docker exec gitea gitea admin user create ...` 로 관리자 계정을 **CLI에서 직접 생성**
+
+정상 종료 시 아래와 같은 메시지가 출력됩니다.
+
+```
+>> Gitea 준비 완료 (UI 없이 CLI로 초기화됨)
+   Web: http://<VM_IP>:3000
+   SSH clone 포트: 2222
+   관리자 계정: admin / (.env 의 ADMIN_PASSWORD)
+```
+
+## 4. 정상 동작 확인 (CLI)
+
+```bash
+# 컨테이너 상태
+docker ps --filter name=gitea
+
+# 관리자 계정이 생성되었는지 확인
+docker exec gitea gitea admin user list
+
+# HTTP 응답 확인
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/api/healthz
+
+# API로 로그인 확인 (Basic Auth)
+curl -u admin:<ADMIN_PASSWORD> http://localhost:3000/api/v1/user
+```
+
+`gitea admin user list` 에 `admin` 계정이 `Is Admin` = true 로 보이면 정상입니다.
+
+## 5. 사용자/저장소 관리 (CLI 전용)
+
+```bash
+# 추가 사용자 생성
+docker exec gitea gitea admin user create \
+  --username <user> --password <pw> --email <user>@example.com --must-change-password=false
+
+# 사용자 목록
+docker exec gitea gitea admin user list
+
+# 비밀번호 초기화
+docker exec gitea gitea admin user change-password --username <user> --password <newpw>
+```
+
+저장소(repository) 생성은 CLI 서브커맨드가 제한적이므로, Gitea REST API를 사용합니다.
+
+```bash
+curl -u admin:<ADMIN_PASSWORD> -X POST http://localhost:3000/api/v1/user/repos \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "my-repo", "private": true}'
+```
+
+## 6. 운영 명령어
+
+```bash
+docker logs -f gitea          # 로그 확인
+docker compose restart        # 재시작
+./scripts/05-stop.sh          # 중지 (데이터 보존)
+docker compose up -d          # 재기동
+```
+
+## 7. 트러블슈팅
+
+| 증상 | 원인 / 조치 |
+|---|---|
+| `04-start.sh` 가 "기동되지 않음"으로 실패 | `docker logs gitea` 확인. 대부분 `./data` 권한 문제(`USER_UID/GID` 불일치) — `sudo chown -R <uid>:<gid> data` 재실행 |
+| 관리자 계정 생성 시 "already exists" | 정상입니다. 이미 생성된 계정을 재사용합니다 |
+| 포트 3000/2222 바인딩 실패 | 다른 프로세스가 포트 점유 중 (`sudo ss -tlnp \| grep -E '3000\|2222'`). `.env` 에서 포트 변경 |
+| SSH clone 시 `Connection refused` | 보안그룹/방화벽에서 `SSH_PORT`(기본 2222) 미개방 여부 확인 |
+| `gitea generate secret` 단계에서 실패 | 이미지가 로드되지 않았을 가능성. `docker images` 로 `gitea/gitea` 존재 확인 후 재시도 |
+
+## 8. 백업 / 복구
+
+- 백업 대상: `./data/` 디렉터리 전체 (DB, 저장소, 설정 포함)
+- 백업 절차:
+  ```bash
+  ./scripts/05-stop.sh
+  tar czf gitea-data-backup-$(date +%F).tar.gz data/
+  docker compose up -d
+  ```
+- 복구 절차: 새 VM/디렉터리에 `data/` 를 동일 경로로 복원 후 `docker compose up -d`
+
+## 9. 버전 업그레이드
+
+1. 로컬 PC에서 `.env` 의 `GITEA_IMAGE` 태그를 변경 후 `01-pull-and-save-image.sh` 재실행
+2. `./scripts/02-transfer-to-vm.sh` 로 새 이미지를 VM에 재전송
+3. VM에서 `.env` 의 `GITEA_IMAGE` 를 동일하게 변경 (전송 스크립트가 `.env` 도 함께 덮어쓰므로, VM에서
+   `ADMIN_PASSWORD` 등을 VM 쪽에서 직접 수정했다면 덮어써지지 않도록 주의)
+4. `./scripts/03-load-image.sh` → `docker compose up -d` (데이터는 `./data` 그대로 유지, Gitea가 기동 시 자동으로 DB 마이그레이션 수행)
+5. 업그레이드 전 반드시 8절의 백업을 먼저 수행할 것
