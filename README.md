@@ -9,6 +9,7 @@ VM 자체에는 Docker도 미리 설치되어 있어야 하므로, 그 선행 �
 | `GitServer/` | Gitea (Git Server) | 이미지: `gitea/gitea` |
 | `Jenkins/` | Jenkins | 이미지: `jenkins/jenkins` |
 | `Nexus/` | Nexus Repository | 이미지: `sonatype/nexus3` |
+| `check/` | 가짜 VM에 실제로 배포해보는 end-to-end 검증 스크립트 | 로컬 PC에서만 사용 (VM에 올리는 대상 아님) |
 
 **네 디렉터리는 서로 완전히 독립적입니다.** 각 디렉터리를 통째로 해당 VM에 복사해서
 그 디렉터리 안에서만 명령을 실행하면 됩니다. 하나의 통합 명령이나 공용 compose 파일은
@@ -26,7 +27,8 @@ VM은 폐쇄망이라 무엇이든 직접 받을 수 없으므로, **로컬 PC�
 
 1. **로컬(인터넷 가능) PC** 에서 파일을 다운로드 (`scripts/01-*.sh`)
 2. **로컬 PC** 에서 SSH로 디렉터리 전체(스크립트 + `.env` + 다운로드한 파일)를 **폐쇄망 VM** 으로 전송
-   (`scripts/02-transfer-to-vm.sh` — `rsync`, 없으면 `tar+scp` 로 자동 전송)
+   (`scripts/02-transfer-to-vm.sh` — 로컬/VM 양쪽에 `rsync`가 모두 있으면 `rsync`로, 하나라도
+   없으면 `tar+scp`로 자동 전송)
 3. **VM** 에서 설치/로드 → 기동 → **CLI만으로** 초기화 (관리자 계정 생성 등)
 
 SSH 전송을 위해 각 디렉터리 `.env` 에 `VM_SSH_HOST` / `VM_SSH_USER` / `VM_SSH_PORT` /

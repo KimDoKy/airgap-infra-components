@@ -62,8 +62,9 @@ vi .env
 3. 자체 서명 TLS 인증서 생성 (`04-generate-tls-cert.sh` 자동 호출, 이미 있으면 재사용)
 4. `docker compose up -d` — Gitea + nginx 두 컨테이너 기동. `INSTALL_LOCK=true` 이므로 브라우저
    설치 화면 자체가 나타나지 않음
-5. Gitea 컨테이너가 준비되면 `docker exec gitea gitea admin user create ...` 로 관리자 계정을
-   **CLI에서 직접 생성**
+5. Gitea 컨테이너가 준비되면 `docker exec -u <USER_UID> gitea gitea admin user create ...` 로
+   관리자 계정을 **CLI에서 직접 생성** (Gitea는 root로 실행되는 것을 거부하므로 반드시
+   `-u <USER_UID>` 를 지정해야 함, 기본값 1000)
 6. nginx가 443에서 응답하는지 확인
 
 정상 종료 시 아래와 같은 메시지가 출력됩니다.
@@ -82,8 +83,8 @@ vi .env
 # 컨테이너 상태 (gitea, gitea-nginx 둘 다 Up 이어야 함)
 docker ps --filter name=gitea
 
-# 관리자 계정이 생성되었는지 확인
-docker exec gitea gitea admin user list
+# 관리자 계정이 생성되었는지 확인 (root로 실행하면 거부되므로 -u 1000 필수)
+docker exec -u 1000 gitea gitea admin user list
 
 # nginx를 거쳐 HTTPS 응답 확인 (자체 서명 인증서를 신뢰해 검증)
 curl -s -o /dev/null -w '%{http_code}\n' --cacert certs/server.crt https://localhost/api/healthz
@@ -100,15 +101,15 @@ docker exec gitea curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000
 ## 5. 사용자/저장소 관리 (CLI 전용)
 
 ```bash
-# 추가 사용자 생성
-docker exec gitea gitea admin user create \
+# 추가 사용자 생성 (root로 실행하면 거부되므로 -u 1000 필수)
+docker exec -u 1000 gitea gitea admin user create \
   --username <user> --password <pw> --email <user>@example.com --must-change-password=false
 
 # 사용자 목록
-docker exec gitea gitea admin user list
+docker exec -u 1000 gitea gitea admin user list
 
 # 비밀번호 초기화
-docker exec gitea gitea admin user change-password --username <user> --password <newpw>
+docker exec -u 1000 gitea gitea admin user change-password --username <user> --password <newpw>
 ```
 
 저장소(repository) 생성은 CLI 서브커맨드가 제한적이므로, Gitea REST API를 사용합니다.

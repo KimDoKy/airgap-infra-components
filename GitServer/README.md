@@ -66,7 +66,7 @@ cd GitServer
 ./scripts/02-transfer-to-vm.sh
 ```
 
-SSH 접속을 확인한 뒤, `rsync`(있으면) 또는 `tar+scp`(없으면)로 `GitServer/` 디렉터리 전체
+SSH 접속을 확인한 뒤, 로컬/VM 양쪽에 `rsync`가 모두 있으면 `rsync`로, 하나라도 없으면 `tar+scp`로 `GitServer/` 디렉터리 전체
 (스크립트, `.env`, `nginx/`, `images/gitea-image.tar.gz` 포함)를 `.env` 의 `VM_REMOTE_DIR`
 경로로 업로드합니다.
 
@@ -90,8 +90,9 @@ cd <VM_REMOTE_DIR>
 2. SECRET_KEY / INTERNAL_TOKEN 생성 (`INSTALL_LOCK=true` 로 웹 설치 마법사 자체를 비활성화)
 3. 자체 서명 TLS 인증서 생성 (`./certs/server.crt`, `./certs/server.key` — 이미 있으면 재사용)
 4. `docker compose up -d` (Gitea + nginx)
-5. `docker exec gitea gitea admin user create ...` 로 관리자 계정을 **CLI에서 직접 생성**
-   (브라우저 설치 화면을 거치지 않음)
+5. `docker exec -u <USER_UID> gitea gitea admin user create ...` 로 관리자 계정을 **CLI에서
+   직접 생성** (Gitea는 root로 실행되는 것을 거부하므로 반드시 `-u <USER_UID>` 지정 필요,
+   브라우저 설치 화면을 거치지 않음)
 6. nginx가 443에서 정상 응답하는지 확인
 
 ### 6단계. 확인
@@ -100,7 +101,7 @@ cd <VM_REMOTE_DIR>
 - Git clone (SSH, TLS와 무관): `git clone ssh://git@<VM_IP>:2222/<user>/<repo>.git`
 - Git clone (HTTPS): `git clone https://<VM_IP>/<user>/<repo>.git` (자체 서명 인증서라면
   `GIT_SSL_NO_VERIFY=true git clone ...` 또는 인증서를 클라이언트에 신뢰 등록)
-- CLI로 추가 사용자/조직 관리: `docker exec gitea gitea admin user create --help`
+- CLI로 추가 사용자/조직 관리: `docker exec -u 1000 gitea gitea admin user create --help`
 
 VM에서의 상세 운영/트러블슈팅은 [MANUAL.md](MANUAL.md) 를 참고하세요.
 

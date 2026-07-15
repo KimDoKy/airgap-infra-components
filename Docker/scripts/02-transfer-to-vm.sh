@@ -32,12 +32,18 @@ ssh -p "${VM_SSH_PORT}" -o BatchMode=yes -o ConnectTimeout=5 \
 echo ">> 원격 디렉터리 준비: ${VM_REMOTE_DIR}"
 ssh -p "${VM_SSH_PORT}" "${VM_SSH_USER}@${VM_SSH_HOST}" "mkdir -p '${VM_REMOTE_DIR}'"
 
-if command -v rsync >/dev/null 2>&1; then
+RSYNC_OK=0
+if command -v rsync >/dev/null 2>&1 && \
+   ssh -p "${VM_SSH_PORT}" "${VM_SSH_USER}@${VM_SSH_HOST}" 'command -v rsync' >/dev/null 2>&1; then
+  RSYNC_OK=1
+fi
+
+if [ "${RSYNC_OK}" = "1" ]; then
   echo ">> rsync 로 전송 중 (${SERVICE_NAME} -> ${VM_REMOTE_DIR})..."
   rsync -avzP -e "ssh -p ${VM_SSH_PORT}" \
     "${SERVICE_DIR}/" "${VM_SSH_USER}@${VM_SSH_HOST}:${VM_REMOTE_DIR}/"
 else
-  echo ">> rsync 가 없어 tar+scp 로 전송합니다..."
+  echo ">> 로컬 또는 VM 중 한쪽에 rsync가 없어 tar+scp 로 전송합니다..."
   TMP_TAR="/tmp/${SERVICE_NAME}-transfer.tar.gz"
   tar czf "${TMP_TAR}" -C "${SERVICE_DIR}" .
   scp -P "${VM_SSH_PORT}" "${TMP_TAR}" "${VM_SSH_USER}@${VM_SSH_HOST}:/tmp/"

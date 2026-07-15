@@ -63,7 +63,7 @@ cd Nexus
 ./scripts/02-transfer-to-vm.sh
 ```
 
-SSH 접속을 확인한 뒤, `rsync`(있으면) 또는 `tar+scp`(없으면)로 `Nexus/` 디렉터리 전체
+SSH 접속을 확인한 뒤, 로컬/VM 양쪽에 `rsync`가 모두 있으면 `rsync`로, 하나라도 없으면 `tar+scp`로 `Nexus/` 디렉터리 전체
 (스크립트, `.env`, `nginx/`, `images/nexus-image.tar.gz` 포함)를 `.env` 의 `VM_REMOTE_DIR`
 경로로 업로드합니다.
 

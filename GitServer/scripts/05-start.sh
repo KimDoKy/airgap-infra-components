@@ -18,9 +18,14 @@ sudo chown -R "${USER_UID}:${USER_GID}" data
 docker compose up -d
 
 echo ">> Gitea 기동 대기 중..."
+# 단순히 CLI(gitea admin user list)가 성공하는 것만으로는 부족합니다 - 이 명령은 DB
+# 접근만 확인할 뿐, 실제 웹 서버(:3000)가 리스닝을 시작했는지는 보장하지 않습니다
+# (CLI 서브커맨드는 웹 서버와 별개로 동작하기 때문). 웹 서버까지 준비됐는지 직접 확인합니다.
 READY=0
 for i in $(seq 1 30); do
-  if docker exec gitea gitea admin user list >/dev/null 2>&1; then
+  CODE=$(docker exec -u "${USER_UID}" gitea curl -s -o /dev/null -w '%{http_code}' \
+    http://localhost:3000/api/healthz || true)
+  if [ "${CODE}" = "200" ]; then
     READY=1
     break
   fi
@@ -33,7 +38,7 @@ if [ "${READY}" -ne 1 ]; then
 fi
 
 echo ">> CLI로 관리자 계정 생성 시도: ${ADMIN_USER}"
-if ! CREATE_OUT=$(docker exec gitea gitea admin user create \
+if ! CREATE_OUT=$(docker exec -u "${USER_UID}" gitea gitea admin user create \
     --username "${ADMIN_USER}" \
     --password "${ADMIN_PASSWORD}" \
     --email "${ADMIN_EMAIL}" \
@@ -53,8 +58,8 @@ echo ">> nginx(TLS) 기동 대기 중..."
 TLS_READY=0
 for i in $(seq 1 30); do
   CODE=$(curl -s -o /dev/null -w '%{http_code}' --cacert certs/server.crt \
-    "https://localhost:${TLS_PORT}/" || true)
-  if [ "${CODE}" != "000" ]; then
+    "https://localhost:${TLS_PORT}/api/healthz" || true)
+  if [ "${CODE}" = "200" ]; then
     TLS_READY=1
     break
   fi
