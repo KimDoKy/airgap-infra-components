@@ -13,6 +13,7 @@ echo ">> ./data 디렉터리 소유권을 ${USER_UID}:${USER_GID} 로 설정합�
 sudo chown -R "${USER_UID}:${USER_GID}" data
 
 "$(dirname "$0")/00-generate-secrets.sh"
+"$(dirname "$0")/04-generate-tls-cert.sh"
 
 docker compose up -d
 
@@ -48,8 +49,26 @@ else
   echo ">> 관리자 계정 생성 완료."
 fi
 
+echo ">> nginx(TLS) 기동 대기 중..."
+TLS_READY=0
+for i in $(seq 1 30); do
+  CODE=$(curl -s -o /dev/null -w '%{http_code}' --cacert certs/server.crt \
+    "https://localhost:${TLS_PORT}/" || true)
+  if [ "${CODE}" != "000" ]; then
+    TLS_READY=1
+    break
+  fi
+  sleep 2
+done
+
+if [ "${TLS_READY}" -ne 1 ]; then
+  echo "!! nginx가 시간 내에 기동되지 않았습니다. docker logs gitea-nginx 로 확인하세요." >&2
+  exit 1
+fi
+
 echo ""
-echo ">> Gitea 준비 완료 (UI 없이 CLI로 초기화됨)"
-echo "   Web: http://<VM_IP>:${HTTP_PORT}"
+echo ">> Gitea 준비 완료 (UI 없이 CLI로 초기화됨, TLS 적용됨)"
+echo "   Web: https://<VM_IP>:${TLS_PORT} (또는 https://${TLS_DOMAIN}/)"
 echo "   SSH clone 포트: ${SSH_PORT}"
 echo "   관리자 계정: ${ADMIN_USER} / (.env 의 ADMIN_PASSWORD)"
+echo "   자체 서명 인증서이므로 브라우저 경고가 뜨는 것은 정상입니다."

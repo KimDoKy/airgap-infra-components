@@ -19,5 +19,18 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "${HTTP_PORT}:3000"
+      # HTTP(3000)는 호스트에 노출하지 않음 - nginx 컨테이너를 통해서만 접근 (TLS 종료)
       - "${SSH_PORT}:22"
+
+  nginx:
+    image: ${NGINX_IMAGE}
+    container_name: gitea-nginx
+    restart: unless-stopped
+    depends_on:
+      - gitea
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "${TLS_PORT}:443"
+      - "${TLS_HTTP_PORT}:80"

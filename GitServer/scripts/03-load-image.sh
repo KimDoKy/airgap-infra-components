@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # [폐쇄망 VM] 에서 실행합니다.
-# 로컬 PC에서 전달받은 이미지 tar.gz 파일을 이 VM의 docker에 로드합니다.
+# 로컬 PC에서 전달받은 이미지 tar.gz 파일(Gitea + nginx)을 이 VM의 docker에 로드합니다.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

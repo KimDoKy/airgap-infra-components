@@ -1,3 +1,4 @@
 images/*.tar
 images/*.tar.gz
 nexus-data/
+certs/

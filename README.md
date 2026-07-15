@@ -42,6 +42,13 @@ CLI/REST API로 무인 초기화**되도록 구성했습니다.
 | Jenkins | `-Djenkins.install.runSetupWizard=false` + `init.groovy.d` 그루비 스크립트로 기동 시 관리자 계정 자동 생성 |
 | Nexus | 설치 마법사 없이 REST API(curl)로 초기 admin 비밀번호 변경 및 익명 접근 비활성화 |
 
+세 서비스 모두 **앞단에 nginx 컨테이너를 함께 띄워 TLS를 종료**합니다. 각 서비스는 컨테이너
+내부에서만 평문 HTTP로 열려 있고, 호스트에는 nginx의 443(HTTPS)/80(HTTPS 리다이렉트)만
+노출됩니다. 인증서는 자체 서명(self-signed)이며 VM에서 `openssl`로 직접 생성됩니다
+(각 디렉터리의 `scripts/04-generate-tls-cert.sh`, 기동 스크립트가 자동 호출). Gitea의 git-SSH
+클론용 포트(기본 2222), Jenkins의 에이전트(JNLP) 포트(기본 50000)는 HTTP가 아니므로 nginx를
+거치지 않고 그대로 직접 노출됩니다.
+
 각 디렉터리에는 문서가 두 종류 있습니다.
 
 - `README.md` : 로컬 PC 작업부터 VM 작업까지 전체 흐름 개요
@@ -62,12 +69,14 @@ CLI/REST API로 무인 초기화**되도록 구성했습니다.
 - SSH 전송 대상 (`VM_SSH_HOST`, `VM_SSH_USER`, `VM_SSH_PORT`, `VM_REMOTE_DIR`) — 네 디렉터리 모두
 - Docker 설치 대상 VM의 CPU 아키텍처 (`Docker/.env` 의 `ARCH`)
 - 관리자 비밀번호 (`ADMIN_PASSWORD` / `JENKINS_ADMIN_PASSWORD`)
-- Gitea의 `GITEA_DOMAIN` / `GITEA_ROOT_URL` (VM의 실제 접속 주소)
+- `TLS_DOMAIN` (VM의 실제 접속 주소, IP 또는 사내 도메인) — GitServer/Jenkins/Nexus 세 디렉터리
+  모두. TLS 인증서의 CN/SAN에 사용되며, Gitea는 `GITEA_DOMAIN` 도 동일하게 맞춰야 함
 - 필요 시 포트 값
 
 ## 이번 범위 밖 (다음 단계)
 
 - Jenkins 플러그인 오프라인 설치 (Update Center 접근 불가로 별도 진행 필요)
 - Nexus를 Maven/npm/Docker 등 프록시 저장소로 구성하여 Jenkins/빌드에서 활용
-- 각 서비스 앞단 리버스 프록시/HTTPS 적용
+- 자체 서명 인증서 대신 사내 내부 CA로 발급받은 인증서 사용 (각 디렉터리 `MANUAL.md` 의
+  "내부 CA로 발급받은 인증서로 교체하기" 참고 — `certs/server.crt`/`server.key` 교체 후 nginx만 재시작)
 - 외부 DB(PostgreSQL 등) 연동, 백업 자동화 등 운영 고도화
