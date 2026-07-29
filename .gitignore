@@ -1,0 +1,5 @@
+# 실제 시크릿이 든 .env 는 절대 커밋하지 않음 (템플릿은 .env.example 사용)
+.env
+.env.bak
+# VM 실행 명령 로그 (관리자 비번 평문 포함)
+vm-commands.txt
