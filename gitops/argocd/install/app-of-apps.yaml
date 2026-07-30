@@ -1,0 +1,21 @@
+# App-of-Apps — ArgoCD 가 gitops repo 의 argocd/ 안 Application 들(application-{dev,stg,prd}.yaml)을
+# 스스로 관리(GitOps). install/ 하위는 recurse=false 로 제외(부트스트랩 전용).
+# 부트스트랩: 이 파일만 kubectl apply → 이후 3개 env 앱은 ArgoCD 가 자동 생성·동기화.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: acme-apps
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git
+    targetRevision: main
+    path: argocd
+    directory:
+      recurse: false          # argocd/ 최상위의 application-*.yaml 만 (install/ 제외)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

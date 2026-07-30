@@ -1,0 +1,22 @@
+# ArgoCD AppProject — acme 앱 배포 범위 제한(어떤 repo→어떤 클러스터/ns 만 허용).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: acme
+  namespace: argocd
+spec:
+  description: acme app delivery
+  sourceRepos:
+    - ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git    # GitOps repo 만 허용
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: acme-app-dev
+    - server: https://kubernetes.default.svc
+      namespace: acme-app-stg
+    - server: https://kubernetes.default.svc
+      namespace: acme-app-prd
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+  namespaceResourceWhitelist:
+    - { group: "apps", kind: Deployment }
+    - { group: "", kind: Service }

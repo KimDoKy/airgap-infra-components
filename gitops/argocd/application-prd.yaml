@@ -1,0 +1,20 @@
+# ArgoCD Application (prd) — prd 는 자동 동기화 대신 수동 승인(자동 prune/selfHeal 끔)을 권장.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: acme-app-prd
+  namespace: argocd
+spec:
+  project: acme
+  source:
+    repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git
+    targetRevision: main
+    path: helm/acme-app
+    helm:
+      valueFiles: [ values-prd.yaml ]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-app-prd
+  syncPolicy:
+    # prd: 자동 동기화 비활성(수동 Sync 승인). 자동으로 하려면 dev 처럼 automated 블록 추가.
+    syncOptions: [ CreateNamespace=true ]

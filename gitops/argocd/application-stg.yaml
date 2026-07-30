@@ -1,0 +1,20 @@
+# ArgoCD Application (stg)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: acme-app-stg
+  namespace: argocd
+spec:
+  project: acme
+  source:
+    repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git
+    targetRevision: main
+    path: helm/acme-app
+    helm:
+      valueFiles: [ values-stg.yaml ]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: acme-app-stg
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ CreateNamespace=true ]

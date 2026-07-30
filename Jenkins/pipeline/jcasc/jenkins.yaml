@@ -1,0 +1,42 @@
+# Jenkins Configuration as Code (JCasC) — GUI 없이 자격·Job 을 코드로 정의.
+# 적용: 컨테이너에 CASC_JENKINS_CONFIG=/var/jenkins_home/casc/jenkins.yaml 환경변수 + 이 파일 마운트.
+#       (docker-compose.override.yml 참고). 플러그인: configuration-as-code, job-dsl 필요.
+# 비밀값은 ${ENV} 치환으로 주입(파일에 평문 저장 금지) — 컨테이너 환경변수로 전달.
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "nexus-ci"
+              username: "${NEXUS_CI_USER}"
+              password: "${NEXUS_CI_PASSWORD}"
+              description: "Nexus CI service account (npm)"
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: "gitea-ssh"
+              username: "git"
+              description: "Gitea clone key (jenkins deploy key)"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${GITEA_SSH_PRIVATE_KEY}"
+
+jobs:
+  - script: >
+      multibranchPipelineJob('acme-app') {
+        branchSources {
+          branchSource {
+            source {
+              git {
+                id('acme-app')
+                remote('ssh://git@<GITEA_IP>:2222/acme/acme-app.git')
+                credentialsId('gitea-ssh')
+              }
+            }
+          }
+        }
+        factory { workflowBranchProjectFactory { scriptPath('Jenkinsfile') } }
+        // webhook 없이 주기적 브랜치 인덱싱(=폴링)으로 dev/stg/main 변경 감지
+        triggers { periodicFolderTrigger { interval('180000') } }   // 3분
+        orphanedItemStrategy { discardOldItems { numToKeep(20) } }
+      }

@@ -1,0 +1,14 @@
+# 폐쇄망 Jenkins 파이프라인에 필요한 플러그인 (11-download-jenkins-plugins.sh 가 의존성까지 해석)
+workflow-aggregator      # Pipeline
+git                      # Git SCM
+gitea                    # Gitea 연동(멀티브랜치/organization, webhook 수신)
+docker-workflow          # Pipeline 에서 docker agent/이미지 빌드
+pipeline-utility-steps
+credentials-binding      # withCredentials / credentials()
+ssh-credentials
+ssh-agent                # sshagent(['gitea-ssh']) — GitOps repo push 자격
+matrix-auth
+configuration-as-code    # JCasC — GUI 없이 자격/시스템/Job 설정 코드화(필수)
+job-dsl                  # JCasC jobs 스크립트로 멀티브랜치 Job 생성(필수)
+# 아래는 webhook(대안 트리거) 사용 시:
+# generic-webhook-trigger

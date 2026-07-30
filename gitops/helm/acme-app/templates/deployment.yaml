@@ -1,0 +1,55 @@
+{{- range $name, $c := .Values.components }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acme-app-{{ $name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app.kubernetes.io/name: acme-app
+    app.kubernetes.io/component: {{ $name }}
+    app.kubernetes.io/managed-by: argocd
+    env: {{ $.Values.envName }}
+spec:
+  replicas: {{ $c.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: acme-app-{{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: acme-app-{{ $name }}
+        app.kubernetes.io/component: {{ $name }}
+        env: {{ $.Values.envName }}
+    spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # 물리 분리: 해당 env 로 label 된 노드에만 배치
+      nodeSelector:
+        {{ $.Values.nodeEnvLabelKey }}: {{ $.Values.envName | quote }}
+      # 해당 env 로 taint(NoSchedule)된 노드에만 스케줄 (다른 env pod 배제)
+      tolerations:
+        - key: {{ $.Values.nodeEnvLabelKey | quote }}
+          operator: "Equal"
+          value: {{ $.Values.envName | quote }}
+          effect: "NoSchedule"
+      containers:
+        - name: {{ $name }}
+          image: "{{ $c.image.repository }}:{{ $c.image.tag }}"
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ $c.containerPort }}
+          {{- with $c.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.healthPath }}
+          readinessProbe:
+            httpGet: { path: {{ . | quote }}, port: {{ $c.containerPort }} }
+            initialDelaySeconds: 5
+          {{- end }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+---
+{{- end }}

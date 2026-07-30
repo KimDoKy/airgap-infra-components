@@ -3,3 +3,12 @@
 .env.bak
 # VM 실행 명령 로그 (관리자 비번 평문 포함)
 vm-commands.txt
+# Claude Code 로컬 상태
+.claude/
+# node 빌드 산출물
+node_modules/
+# 컨테이너 이미지 tar / 오프라인 플러그인 (빌드 산출물 — 커밋 금지)
+*.tar
+*.tar.gz
+*.tgz
+*.hpi

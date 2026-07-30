@@ -1,0 +1,13 @@
+{
+  "name": "acme-sample-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "acme 샘플 백엔드 (hello world API)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

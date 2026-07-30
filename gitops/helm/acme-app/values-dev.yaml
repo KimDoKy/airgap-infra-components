@@ -1,0 +1,11 @@
+envName: dev
+namespace: acme-app-dev
+components:
+  frontend:
+    replicaCount: 1
+    image: { tag: "latest" }      # ← Jenkins(CI) 가 커밋으로 갱신
+  backend:
+    replicaCount: 1
+    image: { tag: "latest" }      # ← Jenkins(CI) 가 커밋으로 갱신
+    env:
+      - { name: APP_ENV, value: "dev" }

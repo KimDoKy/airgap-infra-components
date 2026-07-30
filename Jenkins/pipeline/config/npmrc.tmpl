@@ -1,0 +1,10 @@
+# npm → Nexus 레지스트리 (폐쇄망: 모든 의존성은 Nexus 에서). Jenkinsfile 이 envsubst 로 렌더링.
+# 필요 변수: NEXUS_NPM_REGISTRY, NEXUS_HOST, NEXUS_AUTH_B64(= base64 "ci:<pw>")
+registry=${NEXUS_NPM_REGISTRY}
+//${NEXUS_HOST}/repository/npm-group/:_auth=${NEXUS_AUTH_B64}
+//${NEXUS_HOST}/repository/npm-hosted/:_auth=${NEXUS_AUTH_B64}
+always-auth=true
+# 자체서명 인증서: 에이전트 이미지에 nexus.crt 를 신뢰 등록했다면 strict-ssl=true 유지.
+# 신뢰 등록 전 임시로만: strict-ssl=false (운영 비권장)
+strict-ssl=true
+fetch-retries=2

@@ -1,0 +1,88 @@
+// ===================================================================
+// CI 파이프라인 (Jenkins = CI만) — Gitea 액션 → 빌드(Node.js, 의존성 Nexus) → 이미지 → ECR push
+//   → GitOps repo 의 이미지 태그 갱신(커밋). **배포는 ArgoCD(CD)가 담당** (이 파이프라인은 EKS 미접근).
+// 앱은 2개 컴포넌트: frontend/ (vite→nginx), backend/ (express). 각기 이미지·ECR 리포.
+// 폐쇄망: 인터넷 없음. AWS(ECR)는 CLI 없이 REST(SigV4). 설정은 GUI 없이 JCasC/코드.
+//
+// 트리거: SCM 폴링(pollSCM). Jenkins 인바운드 0 — cicd→gitea:2222 채널만 사용.
+// 빌드 에이전트: node/docker(호스트 docker.sock, DooD)/git. (kubectl/helm 은 CI 에 불필요)
+// ===================================================================
+def COMPONENTS = ['frontend', 'backend']
+
+pipeline {
+  agent {
+    docker {
+      image 'acme-ci-agent:1.0'
+      args  '-v /var/run/docker.sock:/var/run/docker.sock --group-add 999'
+      reuseNode true
+    }
+  }
+  options { timestamps(); disableConcurrentBuilds(); buildDiscarder(logRotator(numToKeepStr: '30')) }
+  triggers { pollSCM('H/3 * * * *') }
+
+  environment {
+    NEXUS_CI  = credentials('nexus-ci')               // ci:<pw> (npm 자격)
+    IMAGE_TAG = "${env.GIT_COMMIT ?: 'dev'}".take(12)
+  }
+
+  stages {
+    stage('Resolve env') {
+      steps {
+        script {
+          def ref = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+          def isTag = (env.TAG_NAME != null && env.TAG_NAME != '')
+          env.DEPLOY_ENV = isTag ? 'prd' :
+                           (ref == 'dev') ? 'dev' : (ref == 'stg') ? 'stg' :
+                           (ref == 'main' || ref == 'prd') ? 'prd' : ''
+          echo "ref=${ref}  DEPLOY_ENV=${env.DEPLOY_ENV ?: '(build only)'}  IMAGE_TAG=${env.IMAGE_TAG}"
+        }
+      }
+    }
+
+    stage('Render .npmrc (Nexus)') {
+      steps {
+        sh '''
+          set -e
+          . pipeline/pipeline.env
+          export NEXUS_AUTH_B64=$(printf '%s:%s' "$NEXUS_CI_USR" "$NEXUS_CI_PSW" | base64 | tr -d '\\n')
+          for c in frontend backend; do envsubst < pipeline/config/npmrc.tmpl > "$c/.npmrc"; done
+        '''
+      }
+    }
+
+    stage('Build & Push images') {
+      steps {
+        script {
+          for (c in COMPONENTS) {
+            stage("build:${c}") {
+              sh """
+                set -e
+                . pipeline/pipeline.env
+                docker build -t "\${APP_NAME}-${c}:\${IMAGE_TAG}" ${c}
+              """
+            }
+            if (env.DEPLOY_ENV) {
+              stage("push:${c}") { sh "bash pipeline/scripts/20-ecr-login-push.sh ${c} \"\${IMAGE_TAG}\"" }
+            }
+          }
+        }
+      }
+    }
+
+    // CD 는 ArgoCD 가 담당. CI 는 GitOps repo 의 이미지 태그만 갱신(커밋) → ArgoCD 가 감지·배포.
+    stage('Update GitOps (image tag)') {
+      when { expression { return env.DEPLOY_ENV } }
+      steps {
+        sshagent(['gitea-ssh']) {                       // GitOps repo push 자격(gitea-ssh 재사용)
+          sh 'bash pipeline/scripts/21-update-gitops.sh "${DEPLOY_ENV}" "${IMAGE_TAG}"'
+        }
+      }
+    }
+  }
+
+  post {
+    always  { sh 'rm -f frontend/.npmrc backend/.npmrc || true' }
+    success { echo "CI 완료: frontend+backend @ ${env.IMAGE_TAG} → env=${env.DEPLOY_ENV ?: '(build only)'} (배포는 ArgoCD)" }
+    failure { echo '실패 — 로그 확인' }
+  }
+}

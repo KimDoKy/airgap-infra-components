@@ -1,0 +1,17 @@
+envName: prd
+namespace: acme-app-prd
+components:
+  frontend:
+    replicaCount: 3
+    image: { tag: "latest" }      # ← Jenkins(CI) 가 커밋으로 갱신
+    resources:
+      requests: { cpu: "100m", memory: "128Mi" }
+      limits:   { cpu: "500m", memory: "512Mi" }
+  backend:
+    replicaCount: 3
+    image: { tag: "latest" }      # ← Jenkins(CI) 가 커밋으로 갱신
+    env:
+      - { name: APP_ENV, value: "prd" }
+    resources:
+      requests: { cpu: "500m", memory: "512Mi" }
+      limits:   { cpu: "2",    memory: "2Gi" }

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: acme-app
+description: acme 앱(frontend+backend) 배포 차트 — ArgoCD 가 렌더링. env 는 namespace + node taint 로 분리.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

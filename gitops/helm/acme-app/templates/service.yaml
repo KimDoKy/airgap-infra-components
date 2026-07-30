@@ -1,0 +1,20 @@
+{{- range $name, $c := .Values.components }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: acme-app-{{ $name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app.kubernetes.io/name: acme-app
+    app.kubernetes.io/component: {{ $name }}
+    env: {{ $.Values.envName }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: acme-app-{{ $name }}
+  ports:
+    - port: {{ $c.servicePort }}
+      targetPort: {{ $c.containerPort }}
+      protocol: TCP
+---
+{{- end }}
