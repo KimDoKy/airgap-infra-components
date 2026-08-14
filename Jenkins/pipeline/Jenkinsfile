@@ -1,10 +1,10 @@
 // ===================================================================
-// CI 파이프라인 (Jenkins = CI만) — Gitea 액션 → 빌드(Node.js, 의존성 Nexus) → 이미지 → ECR push
-//   → GitOps repo 의 이미지 태그 갱신(커밋). **배포는 ArgoCD(CD)가 담당** (이 파이프라인은 EKS 미접근).
-// 앱은 2개 컴포넌트: frontend/ (vite→nginx), backend/ (express). 각기 이미지·ECR 리포.
-// 폐쇄망: 인터넷 없음. AWS(ECR)는 CLI 없이 REST(SigV4). 설정은 GUI 없이 JCasC/코드.
+// CI 파이프라인 (Jenkins = CI만) — Gitea 액션 → 빌드(Node.js, 의존성 Nexus) → 이미지 → NCR push
+//   → GitOps repo(config-repo) 의 이미지 태그 갱신(커밋). **배포는 ArgoCD(CD)가 담당** (NKS 미접근).
+// 앱은 2개 컴포넌트: frontend/ (vite→nginx), backend/ (express). 각기 이미지·NCR 리포.
+// NCR(NHN Container Registry)는 docker login(basic, ncr-cred)으로 push — 인터넷 egress.
 //
-// 트리거: SCM 폴링(pollSCM). Jenkins 인바운드 0 — cicd→gitea:2222 채널만 사용.
+// 트리거: SCM 폴링(pollSCM). Jenkins 인바운드 0 — cicd→gitea(터널) 채널만 사용.
 // 빌드 에이전트: node/docker(호스트 docker.sock, DooD)/git. (kubectl/helm 은 CI 에 불필요)
 // ===================================================================
 def COMPONENTS = ['frontend', 'backend']
@@ -22,6 +22,7 @@ pipeline {
 
   environment {
     NEXUS_CI  = credentials('nexus-ci')               // ci:<pw> (npm 자격)
+    NCR       = credentials('ncr-cred')               // NCR_USR/NCR_PSW (레지스트리 push 자격)
     IMAGE_TAG = "${env.GIT_COMMIT ?: 'dev'}".take(12)
   }
 
@@ -32,7 +33,7 @@ pipeline {
           def ref = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
           def isTag = (env.TAG_NAME != null && env.TAG_NAME != '')
           env.DEPLOY_ENV = isTag ? 'prd' :
-                           (ref == 'dev') ? 'dev' : (ref == 'stg') ? 'stg' :
+                           (ref == 'dev') ? 'dev' : (ref == 'test') ? 'test' :
                            (ref == 'main' || ref == 'prd') ? 'prd' : ''
           echo "ref=${ref}  DEPLOY_ENV=${env.DEPLOY_ENV ?: '(build only)'}  IMAGE_TAG=${env.IMAGE_TAG}"
         }
@@ -62,7 +63,7 @@ pipeline {
               """
             }
             if (env.DEPLOY_ENV) {
-              stage("push:${c}") { sh "bash pipeline/scripts/20-ecr-login-push.sh ${c} \"\${IMAGE_TAG}\"" }
+              stage("push:${c}") { sh "bash pipeline/scripts/20-ncr-login-push.sh ${c} \"\${IMAGE_TAG}\"" }
             }
           }
         }

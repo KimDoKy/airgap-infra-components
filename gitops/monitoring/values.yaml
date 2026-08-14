@@ -1,39 +1,29 @@
+# 플랫폼(모니터링)은 ops 노드에 배치(nodeSelector env=ops). ops 는 taint 없음 → toleration 불필요.
+# taint 는 앱(dev/test/prd) 격리 전용이므로 플랫폼은 taint 메커니즘과 무관.
+# (Grafana ingress/root_url 은 nks/scripts/06-expose-monitoring.sh 가 LB_IP 확정 후 붙인다.)
 alertmanager:
   enabled: false
 prometheusOperator:
-  nodeSelector: { role: infra }
+  nodeSelector: { env: ops }
   admissionWebhooks:
     patch:
-      nodeSelector: { role: infra }
+      nodeSelector: { env: ops }
 prometheus:
   prometheusSpec:
-    nodeSelector: { role: infra }
+    nodeSelector: { env: ops }
     retention: 2d
     resources:
       requests: { cpu: 100m, memory: 400Mi }
       limits: { memory: 1200Mi }
 grafana:
-  nodeSelector: { role: infra }
+  nodeSelector: { env: ops }
   adminPassword: "<GRAFANA_PW>"
   service: { type: ClusterIP }
   resources:
     requests: { cpu: 50m, memory: 128Mi }
     limits: { memory: 384Mi }
-  # 외부(온콜) 접근: ingress-nginx + Grafana 자체 로그인. <LB_IP> = ingress LB 공인 IP(nip.io).
-  grafana.ini:
-    server:
-      root_url: https://grafana.<LB_IP>.nip.io
-  ingress:
-    enabled: true
-    ingressClassName: nginx
-    hosts:
-      - grafana.<LB_IP>.nip.io
-    tls:
-      - secretName: grafana-tls
-        hosts:
-          - grafana.<LB_IP>.nip.io
 kube-state-metrics:
-  nodeSelector: { role: infra }
+  nodeSelector: { env: ops }
 prometheus-node-exporter:
   tolerations:
-    - operator: Exists
+    - operator: Exists   # DaemonSet: dev/test/prd taint 노드까지 전 노드 커버

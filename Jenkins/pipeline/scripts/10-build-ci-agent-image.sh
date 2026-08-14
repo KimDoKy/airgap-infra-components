@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [로컬 / 인터넷 가능 PC] CI 에이전트 이미지(node+docker+git, SigV4용 openssl/jq)를 빌드해 tar 로 저장.
+# [로컬 / 인터넷 가능 PC] CI 에이전트 이미지(node+docker+git, NCR/Nexus 접근용 openssl/jq)를 빌드해 tar 로 저장.
 # 폐쇄망 반입용. 빌드 PC=Intel(amd64) → cicd VM(amd64)과 동일 아키텍처(플랫폼 강제 불필요).
 set -euo pipefail
 cd "$(dirname "$0")/.."          # pipeline/ 로

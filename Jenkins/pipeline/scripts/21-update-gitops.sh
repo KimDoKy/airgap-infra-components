@@ -2,14 +2,14 @@
 # CI 마지막 단계 — GitOps repo 의 values-<env>.yaml 이미지 태그를 갱신·커밋·push.
 # 이후 ArgoCD 가 커밋을 감지해 EKS 로 동기화(배포는 ArgoCD 담당, Jenkins 는 EKS 미접근).
 # Git 인증: Jenkinsfile 이 sshagent(['gitea-ssh']) 로 키 제공 → 여기선 GIT_SSH_COMMAND 만 지정.
-# 사용: 21-update-gitops.sh <dev|stg|prd> <IMAGE_TAG>
+# 사용: 21-update-gitops.sh <dev|test|prd> <IMAGE_TAG>
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 . pipeline/pipeline.env
 
-DEPLOY_ENV="${1:?dev|stg|prd 필요}"; TAG="${2:?IMAGE_TAG 필요}"
+DEPLOY_ENV="${1:?dev|test|prd 필요}"; TAG="${2:?IMAGE_TAG 필요}"
 : "${GITOPS_REPO_URL:?}"; GITOPS_BRANCH="${GITOPS_BRANCH:-main}"
-case "$DEPLOY_ENV" in dev|stg|prd) ;; *) echo "환경은 dev|stg|prd" >&2; exit 1;; esac
+case "$DEPLOY_ENV" in dev|test|prd) ;; *) echo "환경은 dev|test|prd" >&2; exit 1;; esac
 
 export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
 WORK=$(mktemp -d)

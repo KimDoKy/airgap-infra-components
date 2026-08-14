@@ -12,6 +12,12 @@ credentials:
               username: "${NEXUS_CI_USER}"
               password: "${NEXUS_CI_PASSWORD}"
               description: "Nexus CI service account (npm)"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "ncr-cred"
+              username: "${NCR_ACCESS_KEY}"
+              password: "${NCR_SECRET_KEY}"
+              description: "NHN NCR push (access/secret)"
           - basicSSHUserPrivateKey:
               scope: GLOBAL
               id: "gitea-ssh"
@@ -29,14 +35,14 @@ jobs:
             source {
               git {
                 id('acme-app')
-                remote('ssh://git@<GITEA_IP>:2222/acme/acme-app.git')
+                remote('ssh://git@host.docker.internal:2222/admin/acme-app.git')  # cicd gitea 터널
                 credentialsId('gitea-ssh')
               }
             }
           }
         }
         factory { workflowBranchProjectFactory { scriptPath('Jenkinsfile') } }
-        // webhook 없이 주기적 브랜치 인덱싱(=폴링)으로 dev/stg/main 변경 감지
+        // webhook 없이 주기적 브랜치 인덱싱(=폴링)으로 dev/test/main 변경 감지
         triggers { periodicFolderTrigger { interval('180000') } }   // 3분
         orphanedItemStrategy { discardOldItems { numToKeep(20) } }
       }
