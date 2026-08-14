@@ -1,3 +1,5 @@
+# [레거시/참고용] EKS 노드그룹 정의. **현재 대상 클러스터는 NHN NKS** → cluster/nodepools.nks.md 를 따를 것.
+#   (아래는 EKS 로 갈 때의 노드그룹 label+taint 선언 예시로 남겨둔다.)
 # 환경별 노드 분리 — **권장: 노드그룹 정의에 label+taint 선언**(노드 교체/오토스케일에도 자동 유지).
 #   kubectl taint <node> 는 명령형이라 노드가 바뀌면 사라짐 → 아래처럼 managed nodegroup 에 박는 게 정석.
 # 적용: eksctl create nodegroup -f nodegroups.eksctl.yaml  (또는 Terraform aws_eks_node_group 의 labels/taints)

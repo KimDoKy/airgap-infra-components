@@ -1,0 +1,26 @@
+# Prometheus 외부 접근 Ingress — Prometheus 는 자체 인증이 없어 ingress-nginx basic-auth 로 보호.
+# <LB_IP> = ingress LB 공인 IP(nip.io). 시크릿: prom-basic-auth(htpasswd), prom-tls(자체서명).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: prom-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: Prometheus-oncall   # 공백/괄호 금지(웹훅 검증 거부)
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [ prometheus.<LB_IP>.nip.io ]
+      secretName: prom-tls
+  rules:
+    - host: prometheus.<LB_IP>.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kps-kube-prometheus-stack-prometheus
+                port: { number: 9090 }

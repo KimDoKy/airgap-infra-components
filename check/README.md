@@ -85,9 +85,9 @@ SSH로 들어가서 실제 `02-transfer-to-vm.sh` → `03-load-image.sh` → `05
 
 ## 알려진 참고 사항 (버그 아님)
 
-- Apple Silicon(arm64) 로컬 PC에서 Nexus 체크를 돌리면 `sonatype/nexus3` 이미지가 arm64를
-  지원하지 않아 `The requested image's platform ... does not match ...` 경고가 뜹니다. 에뮬레이션으로
-  정상 동작하지만 느릴 수 있습니다 (실제 폐쇄망 VM이 x86_64라면 해당 없음).
+- 로컬 PC=Intel(x86_64) 이면 `sonatype/nexus3`(amd64) 이미지가 네이티브로 동작해 플랫폼 경고가 없습니다
+  (폐쇄망 VM도 x86_64로 동일). 참고: arm64 PC에서 돌릴 경우엔 `The requested image's platform ... does
+  not match ...` 경고가 뜨고 에뮬레이션으로 느려질 수 있으나, 현재 환경은 x86_64라 해당 없습니다.
 - Nexus의 `GET /service/rest/v1/repositories` 는 익명 접근을 막아도(`DISABLE_ANONYMOUS_ACCESS=true`)
   항상 공개로 응답합니다 (저장소 이름 목록 자체는 민감 정보로 취급되지 않는 Nexus의 기본 동작).
   실제 익명 차단 여부는 `/service/rest/v1/security/users` 같은 엔드포인트로 확인해야 의미가 있습니다.

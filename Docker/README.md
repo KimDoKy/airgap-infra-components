@@ -16,7 +16,7 @@
 - 로컬(인터넷 가능) PC: `curl`, `ssh`/`scp` (가능하면 `rsync`도)
 - 대상 VM(폐쇄망): systemd 기반 Linux, `sudo` 권한
 - 로컬 PC → VM SSH 접근 가능 (키 기반 인증 권장: `ssh-copy-id <user>@<vm-ip>`)
-- VM의 CPU 아키텍처 확인 (`uname -m` → `x86_64` 또는 `aarch64`). `.env` 의 `ARCH` 와 일치해야 함
+- VM의 CPU 아키텍처 = `x86_64`(Intel, `uname -m` 확인 — 전 VM 동일). `.env` 의 `ARCH=x86_64` 와 일치
 
 ## 디렉터리 구조
 

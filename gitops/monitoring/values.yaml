@@ -1,0 +1,39 @@
+alertmanager:
+  enabled: false
+prometheusOperator:
+  nodeSelector: { role: infra }
+  admissionWebhooks:
+    patch:
+      nodeSelector: { role: infra }
+prometheus:
+  prometheusSpec:
+    nodeSelector: { role: infra }
+    retention: 2d
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits: { memory: 1200Mi }
+grafana:
+  nodeSelector: { role: infra }
+  adminPassword: "<GRAFANA_PW>"
+  service: { type: ClusterIP }
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 384Mi }
+  # 외부(온콜) 접근: ingress-nginx + Grafana 자체 로그인. <LB_IP> = ingress LB 공인 IP(nip.io).
+  grafana.ini:
+    server:
+      root_url: https://grafana.<LB_IP>.nip.io
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - grafana.<LB_IP>.nip.io
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.<LB_IP>.nip.io
+kube-state-metrics:
+  nodeSelector: { role: infra }
+prometheus-node-exporter:
+  tolerations:
+    - operator: Exists

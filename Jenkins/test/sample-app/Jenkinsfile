@@ -1,0 +1,36 @@
+// 테스트 샘플 앱 CI — git push 이벤트 → 이미지 빌드(빌드 중 Nexus 에서 패키지 다운로드) → push(표기만).
+// 빌드는 도구 담긴 ci-agent 컨테이너에서 --network host 로 실행 → cicd 의 로컬 터널(nexus 8443)에 접근.
+pipeline {
+  agent {
+    docker {
+      image 'acme-ci-agent:1.0'
+      args  '--network host -v /var/run/docker.sock:/var/run/docker.sock --group-add DOCKER_GID'
+      reuseNode true
+    }
+  }
+  environment { NEXUS = credentials('nexus-ci') }   // ci:<pw>
+  stages {
+    stage('build image (Nexus 패키지 다운로드)') {
+      steps {
+        sh '''
+          set -e
+          AUTH_B64=$(printf '%s:%s' "$NEXUS_USR" "$NEXUS_PSW" | base64 | tr -d '\\n')
+          docker build --network host \
+            --build-arg NEXUS_URL=https://localhost:8443 \
+            --build-arg NEXUS_AUTH_B64="$AUTH_B64" \
+            -t test-app:${BUILD_NUMBER} .
+        '''
+      }
+    }
+    stage('이미지 검증 (패키지 포함 확인)') {
+      steps { sh 'docker run --rm test-app:${BUILD_NUMBER} | tee /tmp/app-out.txt; grep -q "acme build dependency" /tmp/app-out.txt && echo "NEXUS 패키지 포함 확인 OK"' }
+    }
+    stage('ECR push (테스트 생략)') {
+      steps { echo 'ECR push 는 테스트 시나리오에서 생략(표기만). 실제: pipeline/scripts/20-ecr-login-push.sh' }
+    }
+  }
+  post {
+    success { echo 'PIPELINE SUCCESS — git→build→(Nexus 패키지)→image 검증 완료' }
+    always  { sh 'docker image rm -f test-app:${BUILD_NUMBER} >/dev/null 2>&1 || true' }
+  }
+}

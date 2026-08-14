@@ -1,0 +1,25 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<!-- acme CICD 연동 검증용 Freestyle 잡. 파이프라인 플러그인 없이 core 기능만으로 동작.
+     빌드 시 NEXUS_PW(ci 계정 비밀번호)를 주입하고 ci-build.sh 를 실행한다.
+     실제 운영에서는 NEXUS_PW 를 잡 설정에 평문으로 두지 말고 Credentials(Secret text)로 바인딩할 것. -->
+<project>
+  <description>acme CICD 연동 검증: GitServer(clone) -&gt; build(Nexus pkg download) -&gt; GitServer(config-repo push)</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>export NEXUS_PW='&lt;CI_PW&gt;'
+bash /var/jenkins_home/ci-build.sh</command>
+      <configuredLocalRules/>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

@@ -140,7 +140,7 @@ ArgoCD(CD, EKS내부) ─watch gitops repo→ 변경 감지 → helm 렌더 → 
 | **자체서명 TLS + nginx 사이드카** | 내부 CA 부재. 서비스는 직접 노출하지 않고 TLS 는 nginx 가 종료 |
 | **UI 없이 CLI/REST/코드** | GUI 접근 불가 가정. Gitea/Nexus=REST·CLI, Jenkins=JCasC |
 | **최소 권한 계정**(gitfwd/ci/jenkins) | 침해 시 파급 최소화, 폐기·회전 용이 |
-| **amd64 이미지 강제 / VM 절대경로 / alias(ProxyJump)** | 빌드 PC=arm64 불일치, `~` 로컬확장, bastion 경유 반복 함정 회피 |
+| **VM 절대경로 / alias(ProxyJump)** | `~` 로컬확장, bastion 경유 반복 함정 회피 (빌드 PC=Intel(amd64)=VM 동일 아키텍처라 이미지 플랫폼 강제는 불필요) |
 | **문서 역할별 분리**(BUILD/ADMIN/USER) | 구축자·관리자·사용자가 필요한 것만 보게 |
 
 > 계정/비밀번호 등 실제 값은 각 서비스 `.env` 및 시크릿에만 두고 문서엔 남기지 않음.

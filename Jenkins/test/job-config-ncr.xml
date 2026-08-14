@@ -1,0 +1,50 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<!-- acme CICD (NKS/NCR) 폴링 잡: Git SCM(test-app) + 폴링 → build(Nexus) → NCR push → config-repo(dev/prd) 갱신.
+     credentials-binding 으로 ncr-cred(usernamePassword) → NCR_USR/NCR_PSW 주입.
+     <CI_PW> 는 Nexus ci 비밀번호로 치환. NCR 자격은 Jenkins Credentials(ncr-cred)로 관리(평문 금지).
+     REST createItem 으로 생성 시 SCMTrigger 를 Script Console 로 start 해야 폴링이 동작. -->
+<project>
+  <description>acme CICD (NKS/NCR): test-app SCM+poll -&gt; build(Nexus) -&gt; NCR push -&gt; config-repo(dev/prd) 갱신</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>ssh://git@host.docker.internal:2222/admin/test-app.git</url>
+        <credentialsId>jenkins-git</credentialsId>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches><hudson.plugins.git.BranchSpec><name>*/main</name></hudson.plugins.git.BranchSpec></branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="empty-list"/>
+    <extensions/>
+  </scm>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers>
+    <hudson.triggers.SCMTrigger><spec>* * * * *</spec><ignorePostCommitHooks>false</ignorePostCommitHooks></hudson.triggers.SCMTrigger>
+  </triggers>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>export NEXUS_PW='&lt;CI_PW&gt;'
+bash /var/jenkins_home/ci-build-ncr.sh</command>
+      <configuredLocalRules/>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper plugin="credentials-binding">
+      <bindings>
+        <org.jenkinsci.plugins.credentialsbinding.impl.UsernamePasswordMultiBinding>
+          <credentialsId>ncr-cred</credentialsId>
+          <usernameVariable>NCR_USR</usernameVariable>
+          <passwordVariable>NCR_PSW</passwordVariable>
+        </org.jenkinsci.plugins.credentialsbinding.impl.UsernamePasswordMultiBinding>
+      </bindings>
+    </org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper>
+  </buildWrappers>
+</project>

@@ -30,8 +30,8 @@ ADMIN_PASSWORD=<강력한 값>             DISABLE_ANONYMOUS_ACCESS=true
 ## 2. 이미지 배포 + 기동 + 초기화
 
 ```bash
-# [로컬] 이미지 pull+save (빌드 PC가 Apple Silicon이면 반드시 amd64 강제)
-DOCKER_DEFAULT_PLATFORM=linux/amd64 ./scripts/01-pull-and-save-image.sh
+# [로컬] 이미지 pull+save (빌드 PC=Intel(amd64) → VM(amd64)과 동일 아키텍처라 플랫폼 강제 불필요)
+./scripts/01-pull-and-save-image.sh
 ./scripts/02-transfer-to-vm.sh                 # VM에 전체 전송
 
 # [VM]  (ssh acme-nexus; cd /home/ubuntu/Nexus)

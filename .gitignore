@@ -12,3 +12,7 @@ node_modules/
 *.tar.gz
 *.tgz
 *.hpi
+
+# NCR 자격(레지스트리/access/secret) — 커밋 금지
+.ncr
+Jenkins/.ncr
