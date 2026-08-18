@@ -1,4 +1,4 @@
-# App-of-Apps — ArgoCD 가 gitops repo 의 argocd/ 안 Application 들(application-{dev,stg,prd}.yaml)을
+# App-of-Apps — ArgoCD 가 gitops repo 의 argocd/ 안 Application 들(application-{dev,test,prd}.yaml)을
 # 스스로 관리(GitOps). install/ 하위는 recurse=false 로 제외(부트스트랩 전용).
 # 부트스트랩: 이 파일만 kubectl apply → 이후 3개 env 앱은 ArgoCD 가 자동 생성·동기화.
 apiVersion: argoproj.io/v1alpha1

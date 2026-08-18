@@ -19,7 +19,7 @@
 
 ```
 gitops/                         ← GitOps repo 루트
-├── helm/acme-app/             # 앱 차트(frontend+backend 한 릴리스) + values-{dev,stg,prd}.yaml
+├── helm/acme-app/             # 앱 차트(frontend+backend 한 릴리스) + values-{dev,test,prd}.yaml
 │   └── values-<env>.yaml       #   components.*.image.tag ← Jenkins(CI)가 커밋으로 갱신
 ├── argocd/
 │   ├── application-<env>.yaml  # ArgoCD Application(환경별): repo watch → EKS sync (app-of-apps 가 관리)
@@ -38,8 +38,8 @@ Jenkins(CI): build → ECR push → gitops values-<env>.yaml 의 image.tag 갱�
                                           │
 ArgoCD(CD): 이 repo 감시 → 변경 감지 → helm 렌더 → EKS 동기화 (ns=acme-app-<env>, node taint env=<env>)
 ```
-- 환경 매핑: git ref(app repo) `dev`→dev, `stg`→stg, `main`/tag→prd (Jenkins 가 해당 env values 갱신).
-- dev/stg 는 자동 동기화(automated), **prd 는 수동 Sync 승인** 권장(application-prd.yaml).
+- 환경 매핑: git ref(app repo) `dev`→dev, `test`→test, `main`/tag→prd (Jenkins 가 해당 env values 갱신).
+- dev/test 는 자동 동기화(automated), **prd 는 수동 Sync 승인** 권장(application-prd.yaml).
 
 ## 적용 (NKS 준비 후)
 
@@ -51,7 +51,7 @@ kubectl apply -f cluster/namespaces.yaml
 
 # 2) ArgoCD 설치 + 부트스트랩 → 이후 dev/prd 앱은 ArgoCD 가 자동 관리 (argocd/install/README.md)
 #    namespace → helm install → project → repo-secret → app-of-apps
-#    (stg 는 이 3노드 테스트 클러스터에 노드풀이 없어 배포 대상 아님 — nodepools.nks.md 참고)
+#    (test 는 이 3노드 테스트 클러스터에 노드풀이 없어 배포 대상 아님 — nodepools.nks.md 참고)
 ```
 > 배포 자체는 손으로 `kubectl apply` 하지 않습니다 — **app-of-apps** 를 한 번 적용하면 ArgoCD 가
 > `argocd/application-<env>.yaml` 을 GitOps 로 동기화합니다. 상세: [argocd/install/README.md](argocd/install/README.md).

@@ -1,0 +1,17 @@
+# AppProject: acme-dev — dev 환경 앱 배포 격리(소스 repo/대상 ns 화이트리스트).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: acme-dev
+  namespace: argocd
+spec:
+  description: "acme dev 환경 — 앱 배포 격리"
+  sourceRepos:
+    - <GITEA_REPO_URL>                       # 허용 소스(config-repo 또는 GitOps repo). '*' 지양
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: acme-app-dev                # 이 env 네임스페이스로만 배포 허용
+  clusterResourceWhitelist: []               # 클러스터 스코프 리소스 생성 금지(네임스페이스드만)
+  namespaceResourceWhitelist:
+    - { group: '*', kind: '*' }
+  # RBAC 는 argocd-rbac-cm 에서 project 별 권한 매핑(예: dev-sync 롤을 개발팀에)

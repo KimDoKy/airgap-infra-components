@@ -33,19 +33,29 @@ stringData:
   insecure: "${ARGOCD_INSECURE_REPO:-true}"
 YAML
 
+# env 별 AppProject(격리) + Application. prd 는 자동 sync 없음(수동 승인) + AppProject syncWindow 로도 차단.
+PROJ_DIR="$NKS_DIR/../gitops/argocd/projects"
 for e in dev test prd; do
   [ -n "$(nodes_for "$e")" ] || continue
   ns="${APP_NS_PREFIX}-${e}"
-  echo ">> Application: test-app-${e} → path apps/test-app-${e} → ns ${ns}"
+  # (1) AppProject (repo 화이트리스트 <GITEA_REPO_URL> 치환)
+  if [ -f "$PROJ_DIR/appproject-${e}.yaml" ]; then
+    sed "s|<GITEA_REPO_URL>|${GITEA_REPO_URL}|g" "$PROJ_DIR/appproject-${e}.yaml" | kubectl apply -f - >/dev/null
+    echo ">> AppProject: acme-${e}"
+  fi
+  # (2) Application — prd 는 automated 제거(수동), dev/test 는 자동
+  if [ "$e" = "prd" ]; then SYNC='syncOptions: [ CreateNamespace=true ]'; MODE='수동승인';
+  else SYNC='automated: { prune: true, selfHeal: true }, syncOptions: [ CreateNamespace=true ]'; MODE='자동'; fi
+  echo ">> Application: test-app-${e} (project=acme-${e}, ${MODE}) → ns ${ns}"
   kubectl apply -f - >/dev/null <<YAML
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata: { name: test-app-${e}, namespace: argocd }
 spec:
-  project: default
+  project: acme-${e}
   source: { repoURL: ${GITEA_REPO_URL}, targetRevision: main, path: apps/test-app-${e}, directory: { recurse: true } }
   destination: { server: https://kubernetes.default.svc, namespace: ${ns} }
-  syncPolicy: { automated: { prune: true, selfHeal: true }, syncOptions: [ CreateNamespace=true ] }
+  syncPolicy: { ${SYNC} }
 YAML
 done
 echo ">> ArgoCD admin 초기비번:"

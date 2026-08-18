@@ -5,7 +5,7 @@ metadata:
   name: acme-app-prd
   namespace: argocd
 spec:
-  project: acme
+  project: acme-prd
   source:
     repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git
     targetRevision: main

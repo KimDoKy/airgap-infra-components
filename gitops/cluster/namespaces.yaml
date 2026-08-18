@@ -5,7 +5,7 @@ metadata: { name: acme-app-dev, labels: { env: dev } }
 ---
 apiVersion: v1
 kind: Namespace
-metadata: { name: acme-app-stg, labels: { env: stg } }
+metadata: { name: acme-app-test, labels: { env: test } }
 ---
 apiVersion: v1
 kind: Namespace

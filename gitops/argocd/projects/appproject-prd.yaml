@@ -1,0 +1,23 @@
+# AppProject: acme-prd — prd 환경. 자동 sync 차단(수동 승인 전용) + 대상 ns 제한.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: acme-prd
+  namespace: argocd
+spec:
+  description: "acme prd 환경 — 수동 승인 배포"
+  sourceRepos:
+    - <GITEA_REPO_URL>
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: acme-app-prd
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - { group: '*', kind: '*' }
+  # 항상 자동 sync 는 거부하고 수동 sync 만 허용(릴리스 매니저 승인). 배포 시간대 제한은 schedule/duration 조정.
+  syncWindows:
+    - kind: deny
+      schedule: '* * * * *'
+      duration: 24h
+      applications: [ '*' ]
+      manualSync: true          # 수동 sync 는 허용

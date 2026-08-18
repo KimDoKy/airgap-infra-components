@@ -6,7 +6,7 @@ metadata:
   name: acme-app-dev
   namespace: argocd
 spec:
-  project: acme
+  project: acme-dev
   source:
     repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git   # GitOps repo (Gitea)
     targetRevision: main

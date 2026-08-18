@@ -17,14 +17,14 @@ managedNodeGroups:
     labels: { env: dev }              # helm nodeSelector(env=dev) 매칭
     taints:
       - { key: env, value: dev, effect: NoSchedule }   # 다른 env pod 배제
-  - name: acme-eks-stg
+  - name: acme-eks-test
     instanceType: t3.medium
     minSize: 1
     desiredCapacity: 2
     maxSize: 3
-    labels: { env: stg }
+    labels: { env: test }
     taints:
-      - { key: env, value: stg, effect: NoSchedule }
+      - { key: env, value: test, effect: NoSchedule }
   - name: acme-eks-prd
     instanceType: t3.large
     minSize: 2

@@ -58,11 +58,11 @@
   - infra 워크로드(ArgoCD/관측)는 `role=infra` toleration + `nodeSelector role=infra` 를 갖도록 설정.
   - dev/prd 앱은 helm values 의 `tolerations`/`nodeSelector`(env) 로 이미 처리(values-<env>.yaml 참고).
 
-## 스테이징(stg) 관련
+## 스테이징(test) 관련
 
-기존 gitops 는 dev/stg/prd 3환경 스캐폴드지만, **이 테스트 클러스터는 infra/dev/prod 3노드라 stg 는
-스케줄 대상이 아니다.** `values-stg.yaml` / `application-stg.yaml` / stg 네임스페이스 정의는 **그대로 두되
-이 클러스터엔 배포하지 않는다**(stg 노드풀이 없어 `env=stg` toleration pod 는 Pending 이 됨).
+기존 gitops 는 dev/test/prd 3환경 스캐폴드지만, **이 테스트 클러스터는 infra/dev/prod 3노드라 test 는
+스케줄 대상이 아니다.** `values-test.yaml` / `application-test.yaml` / test 네임스페이스 정의는 **그대로 두되
+이 클러스터엔 배포하지 않는다**(test 노드풀이 없어 `env=test` toleration pod 는 Pending 이 됨).
 
 ## 생성 순서(요약)
 
