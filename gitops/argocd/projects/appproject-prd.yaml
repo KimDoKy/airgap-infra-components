@@ -14,10 +14,8 @@ spec:
   clusterResourceWhitelist: []
   namespaceResourceWhitelist:
     - { group: '*', kind: '*' }
-  # 항상 자동 sync 는 거부하고 수동 sync 만 허용(릴리스 매니저 승인). 배포 시간대 제한은 schedule/duration 조정.
-  syncWindows:
-    - kind: deny
-      schedule: '* * * * *'
-      duration: 24h
-      applications: [ '*' ]
-      manualSync: true          # 수동 sync 는 허용
+  # prd 수동 승인 게이트 = **Application 에 automated 정책을 두지 않는 것**(nks/04 가 prd 는 automated 제거).
+  #   → 자동 sync 안 됨, 운영자가 수동 Sync 만 가능.
+  # 참고: deny syncWindow(manualSync:true) 는 배포 동결(freeze)용이나, 일부 ArgoCD 버전에서 **수동 Sync 까지
+  #   차단**되는 것을 확인했다(운영 검증 필요). 상시 수동 게이트 목적이면 위 automated 부재로 충분하므로 미사용.
+  # 실질 승인 게이트는 (a) config-repo prd 브랜치 보호(PR/승인) + (b) argocd-rbac-cm 로 prd sync 권한 제한 을 권장.
