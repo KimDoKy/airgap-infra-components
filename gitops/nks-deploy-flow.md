@@ -129,14 +129,21 @@ done
 ```
 - 각 Deployment 는 `imagePullSecrets: [{name: ncr-cred}]` + `nodeSelector {env: <e>}` + `tolerations env=<e>`.
 
-## 4. config-repo 구조 (ArgoCD 감시 대상, Gitea)
+## 4. config-repo 구조 — **환경별 브랜치**(ArgoCD 감시 대상, Gitea)
+
+환경별로 **브랜치를 분리**한다. 각 env 브랜치는 동일 경로 `apps/test-app/` 에 그 환경용 매니페스트를 갖는다.
 
 ```
-config-repo/apps/
-├── test-app/       # dev: deployment.yaml(ns=acme-app-dev, nodeSelector/toleration env=dev), service.yaml
-└── test-app-prd/   # prd: deployment.yaml(ns=acme-app-prd, env=prd), service.yaml
+config-repo (branches)
+├── dev   : apps/test-app/{deployment,service}.yaml  (ns=acme-app-dev,  env=dev)
+├── test  : apps/test-app/{deployment,service}.yaml  (ns=acme-app-test, env=test)
+├── prd   : apps/test-app/{deployment,service}.yaml  (ns=acme-app-prd,  env=prd)
+└── main  : README(브랜치 모델 문서) — 배포 대상 아님
 ```
-- Jenkins 가 빌드마다 두 deployment 의 `image:` 를 동일 태그로 갱신(테스트: 같은 이미지를 dev/prd 승격).
+- ArgoCD Application: `targetRevision=<env 브랜치>`, `path=apps/test-app`. dev/test 자동, **prd 수동 승인**.
+- **CI(Jenkins)** 는 **dev 브랜치**의 `apps/test-app/deployment.yaml` 이미지 태그만 갱신 → dev 자동배포.
+- **승격(dev→test→prd)**: 브랜치별 ns/env 가 달라 git merge 대신 **이미지 태그만 반영**한다
+  (헬퍼: [`../tools/promote-image.sh`](../tools/promote-image.sh)). prd 는 반영 후 ArgoCD 수동 Sync.
 
 ## 5. ArgoCD 설치 + repo + Application (dev/prd)
 

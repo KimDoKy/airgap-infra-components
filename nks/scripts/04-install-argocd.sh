@@ -47,13 +47,14 @@ for e in dev test prd; do
   if [ "$e" = "prd" ]; then SYNC='syncOptions: [ CreateNamespace=true ]'; MODE='수동승인';
   else SYNC='automated: { prune: true, selfHeal: true }, syncOptions: [ CreateNamespace=true ]'; MODE='자동'; fi
   echo ">> Application: test-app-${e} (project=acme-${e}, ${MODE}) → ns ${ns}"
+  # config-repo 는 환경별 브랜치(dev/test/prd). targetRevision=<env 브랜치>, path=apps/test-app(통일).
   kubectl apply -f - >/dev/null <<YAML
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata: { name: test-app-${e}, namespace: argocd }
 spec:
   project: acme-${e}
-  source: { repoURL: ${GITEA_REPO_URL}, targetRevision: main, path: apps/test-app-${e}, directory: { recurse: true } }
+  source: { repoURL: ${GITEA_REPO_URL}, targetRevision: ${e}, path: apps/test-app, directory: { recurse: true } }
   destination: { server: https://kubernetes.default.svc, namespace: ${ns} }
   syncPolicy: { ${SYNC} }
 YAML

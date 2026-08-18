@@ -20,16 +20,18 @@ echo "$NCR_PSW" | docker login "$REG" -u "$NCR_USR" --password-stdin
 docker push "$IMG:$TAG"
 docker logout "$REG" >/dev/null 2>&1 || true
 
-echo "===== [config-repo] deployment 이미지 갱신 → GitServer push (ArgoCD 감시 대상) ====="
+echo "===== [config-repo] dev 브랜치 deployment 이미지 갱신 → push (ArgoCD 자동배포) ====="
+# 환경별 브랜치 모델(dev/test/prd). CI 는 dev 브랜치만 갱신 → ArgoCD 가 dev 자동배포.
+#   test/prd 승격은 별도(대상 브랜치의 이미지 태그 반영 + prd 는 수동 Sync 승인).
 export GIT_SSH_COMMAND="ssh -i /var/jenkins_home/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
 cd /var/jenkins_home; rm -rf cfg
-git clone ssh://git@host.docker.internal:2222/admin/config-repo.git cfg; cd cfg
-sed -i "s|image: .*/acme-poc/test-app:.*|image: ${IMG}:${TAG}|" apps/test-app/deployment.yaml apps/test-app-prd/deployment.yaml
+git clone -b dev ssh://git@host.docker.internal:2222/admin/config-repo.git cfg; cd cfg
+sed -i "s|image: .*/acme-poc/test-app:.*|image: ${IMG}:${TAG}|" apps/test-app/deployment.yaml
 git config user.email ci@acme.local; git config user.name jenkins-ci
-if git commit -am "ci: test-app ${SHA} -> ${IMG}:${TAG}"; then
-  git push origin main; echo "config-repo 갱신됨: ${TAG}"
+if git commit -am "ci(dev): test-app ${SHA} -> ${IMG}:${TAG}"; then
+  git push origin dev; echo "config-repo(dev) 갱신됨: ${TAG}"
 else
-  echo "config-repo 변경 없음"
+  echo "config-repo(dev) 변경 없음"
 fi
 grep 'image:' apps/test-app/deployment.yaml
 docker image rm -f "$IMG:$TAG" >/dev/null 2>&1 || true
