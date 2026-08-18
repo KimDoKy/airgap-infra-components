@@ -2,6 +2,23 @@
 
 폐쇄망(에어갭) 클라우드의 서로 다른 VM 3대에, 각각 컨테이너로 다음을 구축합니다.
 VM 자체에는 Docker도 미리 설치되어 있어야 하므로, 그 선행 단계도 별도 디렉터리로 포함합니다.
+여기에 더해, 앱은 클라우드 **NHN NKS**에 **ArgoCD(GitOps)**로 배포합니다(`gitops/`, `nks/`).
+
+## 역할별 통합 매뉴얼 (여기서 시작)
+
+각 디렉터리의 개별 문서(`README/BUILD/ADMIN/USER/MANUAL`)는 **그대로 유지**하고, 전체를 역할 관점으로
+통합한 매뉴얼을 제공합니다.
+
+| 역할 | 매뉴얼 | 내용 |
+|---|---|---|
+| **인프라 구축자** | [BUILDER.md](BUILDER.md) | Docker→GitServer→Nexus→Jenkins→NKS **순서·실행 스크립트·정상 출력 확인** |
+| **운영자** | [OPERATOR.md](OPERATOR.md) | 계정·저장소·배포(GitOps/ArgoCD)·모니터링·승격·게이트 |
+| **사용자/개발자** | [USER.md](USER.md) | git push→dev 자동배포, 승격 요청, GUI 접근 |
+
+> CD/클러스터 상세: [`gitops/`](gitops/README.md)(ArgoCD·Helm·config-repo 브랜치), [`nks/`](nks/README.md)(노드/설치 스크립트),
+> 전체 아키텍처: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+---
 
 | 디렉터리 | 역할 | 비고 |
 |---|---|---|
