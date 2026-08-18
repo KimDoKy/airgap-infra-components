@@ -22,6 +22,11 @@ NKS 클러스터 쪽 작업을 **로컬에서 kubectl+helm 으로 재현**하는
   로 여기에 배치되고, **NKS 시스템 애드온(CoreDNS·calico-typha·konnectivity 등)도 taint 영향 없이** ops 에 스케줄된다.
 
 > 즉 taint 는 앱(dev/test/prd)만 격리하고, **플랫폼/시스템 컴포넌트는 taint 의 영향을 전혀 받지 않는다.**
+
+**taint 적용 주체** (`.env` 의 `APPLY_TAINT`):
+- **운영** `APPLY_TAINT=false`: taint 는 **NKS 노드그룹 생성 시** 지정(dev/test/prd `env=<e>:NoSchedule`, ops 없음).
+  `01-label-taint-nodes.sh` 는 라벨만 적용. (노드 교체·오토스케일에도 taint 유지되는 정석.)
+- **테스트** `APPLY_TAINT=true`(기본): 스크립트가 dev/test/prd taint 까지 적용. ops 는 두 경우 모두 라벨만.
 > 이 때문에 관리형 애드온이 스케줄 불가로 깨지는 문제가 없다.
 
 ## 실행 순서

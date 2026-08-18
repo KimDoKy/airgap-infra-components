@@ -136,14 +136,21 @@ SCM 폴링 잡 생성·실행까지 **hands-on 절차와 정상 출력**은 [`Je
 
 > 전제: NKS 클러스터(노드 3+개) 생성 완료, 로컬 `kubectl` 이 해당 컨텍스트, **Gitea SG 인바운드에 NKS 노드
 > CIDR → TCP 443** 허용(ArgoCD→config-repo). 상세: [`gitops/nks-deploy-flow.md`](gitops/nks-deploy-flow.md).
+>
+> **★ 노드 taint 정책(운영 vs 테스트)**:
+> - **운영**: taint 는 **NKS 노드그룹 생성 시** 지정한다(노드 교체·오토스케일에도 유지). 노드그룹별로
+>   dev/test/prd = `env=<e>:NoSchedule`, **ops 노드그룹은 taint 없음**(플랫폼/시스템용). 이때 `.env` 에
+>   **`APPLY_TAINT=false`** → `01-label-taint-nodes.sh` 는 **라벨만** 적용(taint 미적용).
+> - **테스트**: `APPLY_TAINT=true`(기본) → 스크립트가 dev/test/prd 에 taint 까지 건다.
+> - 라벨 `env=<e>` 는 두 경우 모두 스크립트가 적용(앱/플랫폼 `nodeSelector` 매칭). ops 는 항상 라벨만.
 
 ```bash
 # (사전) config-repo 환경 브랜치 초기화 — Gitea 준비(2절) 후 1회
 CONFIG_REPO_URL=acme-gitea:admin/config-repo.git NCR_REGISTRY=<host> \
   ./gitops/config-repo-init.sh
 
-cd nks && cp .env.example .env && vi .env   # 노드 이름/NCR/Gitea/비번 채움
-./scripts/01-label-taint-nodes.sh   # 노드 label+taint (dev/test/prd 앱격리; ops 라벨만)
+cd nks && cp .env.example .env && vi .env   # 노드 이름/NCR/Gitea/비번/APPLY_TAINT 채움
+./scripts/01-label-taint-nodes.sh   # 노드 label (+ 테스트는 dev/test/prd taint), ops 라벨만
 ./scripts/02-ncr-pull-secret.sh     # 워크로드 ns + NCR imagePullSecret
 ./scripts/03-install-ingress.sh     # ingress-nginx(LB) → LB 공인 IP(.env 자동기록)
 ./scripts/04-install-argocd.sh      # ArgoCD(ops) + repo + env AppProject/Application(prd 수동) + RBAC
