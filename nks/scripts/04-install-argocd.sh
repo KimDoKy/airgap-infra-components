@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# [로컬/kubectl+helm] ArgoCD 설치(ops 노드) + config-repo(Gitea) 등록 + Application(dev/test/prd) 생성.
-#   전제: NKS→Gitea:443 도달(Gitea SG 인바운드에 NKS 노드 CIDR 허용). config-repo 에 apps/test-app-<env>/ 존재.
+# [로컬/kubectl+helm] ArgoCD 설치(ops 노드) + config-repo(Gitea) 등록 + env AppProject/Application 생성.
+#   전제: NKS→Gitea:443 도달(Gitea SG 인바운드에 NKS 노드 CIDR 허용).
+#         config-repo 에 **환경별 브랜치(dev/test/prd)** + 각 브랜치 apps/test-app/ 존재(gitops/config-repo-init.sh).
 . "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 need helm
 : "${GITEA_REPO_URL:?}"; : "${GITEA_USER:?}"; : "${GITEA_PASSWORD:?}"
@@ -33,7 +34,7 @@ stringData:
   insecure: "${ARGOCD_INSECURE_REPO:-true}"
 YAML
 
-# env 별 AppProject(격리) + Application. prd 는 자동 sync 없음(수동 승인) + AppProject syncWindow 로도 차단.
+# env 별 AppProject(격리) + Application. prd 는 자동 sync 없음(=수동 승인 게이트). test/dev 는 자동.
 PROJ_DIR="$NKS_DIR/../gitops/argocd/projects"
 for e in dev test prd; do
   [ -n "$(nodes_for "$e")" ] || continue

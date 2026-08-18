@@ -10,7 +10,8 @@ NKS 클러스터 쪽 작업을 **로컬에서 kubectl+helm 으로 재현**하는
 - 로컬에 **kubectl**(대상 NKS 컨텍스트 설정됨) + **helm** + **openssl**.
 - **SG**: ArgoCD(NKS)가 Gitea 를 감시하려면 **Gitea VM 의 SG 인바운드에 NKS 노드 서브넷 CIDR → TCP 443** 허용
   (NAT 미사용 시 파드→외부는 노드 IP 로 SNAT). NCR 은 인터넷 egress 로 도달(SG 불필요).
-- **config-repo**(Gitea)에 `apps/test-app-<env>/`(deployment+service, nodeSelector/toleration `env=<e>`) 존재.
+- **config-repo**(Gitea)가 **환경별 브랜치(dev/test/prd)** 로 초기화돼 있어야 함 — 각 브랜치 `apps/test-app/`
+  (deployment+service, `env=<e>`). 부트스트랩: [`../gitops/config-repo-init.sh`](../gitops/config-repo-init.sh).
 
 ## 노드 taint 스킴 — dev / test / prd / ops
 
@@ -29,7 +30,10 @@ NKS 클러스터 쪽 작업을 **로컬에서 kubectl+helm 으로 재현**하는
 cp .env.example .env      # 노드 이름/NCR/Gitea/비번 등 채우기
 vi .env
 
-./scripts/01-label-taint-nodes.sh    # 노드 env label + taint (dev/test/prd/ops)
+# (사전) config-repo 환경 브랜치 초기화 (Gitea) — 최초 1회
+CONFIG_REPO_URL=acme-gitea:admin/config-repo.git NCR_REGISTRY=<host> ../gitops/config-repo-init.sh
+
+./scripts/01-label-taint-nodes.sh    # 노드 env label + taint (dev/test/prd; ops 는 라벨만)
 ./scripts/02-ncr-pull-secret.sh      # 워크로드 ns + NCR imagePullSecret(ncr-cred)
 ./scripts/03-install-ingress.sh      # ingress-nginx(LoadBalancer) → LB 공인 IP(.env 자동기록)
 ./scripts/04-install-argocd.sh       # ArgoCD(ops) + config-repo 등록 + Application(dev/test/prd)

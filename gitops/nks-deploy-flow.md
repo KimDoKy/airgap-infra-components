@@ -103,9 +103,10 @@ IMG=<NCR_REGISTRY_HOST>/acme-poc/test-app
 docker build --no-cache --network host --build-arg NEXUS_URL=https://localhost:8443 \
   --build-arg NEXUS_AUTH_B64=$(printf 'ci:%s' "$NEXUS_PW" | base64 | tr -d '\n') -t "$IMG:$TAG" .
 echo "$NCR_PSW" | docker login "$REG" -u "$NCR_USR" --password-stdin && docker push "$IMG:$TAG"
-# config-repo 클론 후 dev·prd 양쪽 deployment 이미지 갱신 → commit/push
-sed -i "s|image: .*/acme-poc/test-app:.*|image: ${IMG}:${TAG}|" \
-  apps/test-app/deployment.yaml apps/test-app-prd/deployment.yaml
+# config-repo **dev 브랜치**의 deployment 이미지만 갱신 → commit/push (dev 자동배포; test/prd 는 승격)
+git clone -b dev <config-repo> cfg && cd cfg
+sed -i "s|image: .*/acme-poc/test-app:.*|image: ${IMG}:${TAG}|" apps/test-app/deployment.yaml
+git commit -am "ci(dev): ${TAG}" && git push origin dev
 ```
 
 ### 2-3. 잡(Freestyle, Git SCM + 폴링) — `ncr-cred` 바인딩
@@ -145,7 +146,7 @@ config-repo (branches)
 - **승격(dev→test→prd)**: 브랜치별 ns/env 가 달라 git merge 대신 **이미지 태그만 반영**한다
   (헬퍼: [`../tools/promote-image.sh`](../tools/promote-image.sh)). prd 는 반영 후 ArgoCD 수동 Sync.
 
-## 5. ArgoCD 설치 + repo + Application (dev/prd)
+## 5. ArgoCD 설치 + repo + env AppProject/Application (dev/test/prd)
 
 ### 5-1. 설치 (infra 노드에 자동 배치 — taint 없는 유일 노드)
 ```bash
@@ -169,15 +170,16 @@ stringData:
 ```
 > `insecure: "true"` 는 self-signed 우회(사설/테스트). 운영 전 사설 CA 신뢰 또는 정식 인증서 권장.
 
-### 5-3. Application 2개 (dev/prd) — 자동 동기화
+### 5-3. env AppProject + Application (dev/test/prd) — prd 는 수동 승인
 ```yaml
-# dev (prd 는 name=test-app-prd, path=apps/test-app-prd, namespace=acme-app-prd 로 동일 구조)
+# 환경별: name=test-app-<env>, project=acme-<env>, targetRevision=<env 브랜치>, path=apps/test-app, ns=acme-app-<env>
+#   prd 는 syncPolicy.automated 를 두지 않음(=수동 승인). AppProject 는 gitops/argocd/projects/appproject-<env>.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
-metadata: { name: test-app, namespace: argocd }
+metadata: { name: test-app-dev, namespace: argocd }
 spec:
-  project: default
-  source: { repoURL: https://<GITEA_IP>/admin/config-repo.git, targetRevision: main, path: apps/test-app, directory: { recurse: true } }
+  project: acme-dev
+  source: { repoURL: https://<GITEA_IP>/admin/config-repo.git, targetRevision: dev, path: apps/test-app, directory: { recurse: true } }
   destination: { server: https://kubernetes.default.svc, namespace: acme-app-dev }
   syncPolicy: { automated: { prune: true, selfHeal: true }, syncOptions: [ CreateNamespace=true ] }
 ```
