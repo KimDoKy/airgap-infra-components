@@ -49,15 +49,18 @@
 
 | 노드풀 | label | taint | 올라갈 것 |
 |---|---|---|---|
-| `acme-ops` | `env=ops` | **(taint 없음)** | ArgoCD(`argocd` ns), 관측(`monitoring` ns), ingress |
+| `acme-ops` | `env=ops` | `env=ops:NoSchedule` | ArgoCD(`argocd` ns), 관측(`monitoring` ns), ingress |
 | `acme-dev`   | `env=dev`    | `env=dev:NoSchedule`     | `acme-app-dev` ns 앱 |
 | `acme-prd`   | `env=prd`    | `env=prd:NoSchedule`     | `acme-app-prd` ns 앱 |
 
 - **label** → 앱/플랫폼의 `nodeSelector` 매칭(dev/prd 앱=`env=dev|prd`, 플랫폼=`nodeSelector: {env: ops}`).
-- **taint 는 앱 배포 격리 전용** → dev/prd 만 `NoSchedule`. **`acme-ops` 는 taint 없음**: ArgoCD/관측/ingress
-  및 NKS 시스템 애드온(CoreDNS 등)이 taint 영향 없이 스케줄된다(→ 플랫폼은 `nodeSelector env=ops` 만, toleration 불필요).
-  - dev/prd 앱은 매니페스트의 `nodeSelector env=<e>` + `tolerations env=<e>` 로 해당 노드에만 배치
+- **각 노드에 `env=<e>:NoSchedule` taint** → 대응 `toleration` 없는 pod 배제.
+  - **`acme-ops` 도 taint(`env=ops:NoSchedule`)**: ArgoCD/관측/ingress 는 `nodeSelector env=ops` +
+    **`toleration env=ops`** 로 ops 전용 배치(차트 values 에 이미 반영).
+  - dev/prd 앱은 매니페스트의 `nodeSelector env=<e>` + `tolerations env=<e>` 로 해당 노드에만
     (config-repo 환경 브랜치의 `apps/test-app/deployment.yaml`).
+  - ⚠ ops taint 시 관리형 애드온: CoreDNS·calico-typha·konnectivity 는 all-taint tolerate(OK),
+    `calico-kube-controllers` 처럼 아닌 것은 untainted 시스템 nodepool 또는 `env=ops` toleration 추가.
 
 ## 스테이징(test) 관련
 

@@ -58,7 +58,7 @@ kubectl apply -f app-of-apps.yaml
   각 Deployment 에 `imagePullSecrets: [{name: ncr-cred}]`. (별도 IAM/IRSA 없음 — basic auth.)
 - **Gitea 자체서명**: HTTPS 로 감시하므로 repo Secret 에 `insecure: "true"` 필수(self-signed 우회).
   누락 시 `x509: certificate signed by unknown authority`. 운영 전 사설 CA 신뢰/정식 인증서 권장.
-- **노드 배치**: ArgoCD 는 `env=ops` 노드(taint 없음)에 `nodeSelector env=ops` 로 배치. dev/test/prd
+- **노드 배치**: ArgoCD 는 `env=ops:NoSchedule` taint 된 ops 노드에 `nodeSelector env=ops` + `toleration env=ops` 로 배치. dev/test/prd
   노드는 `env=<e>:NoSchedule` taint 로 앱 전용.
 - **GUI 없이 운영**: `kubectl -n argocd ...` / `argocd` CLI(포트포워드 또는 Ingress) 로. 최초 admin 비번:
   `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d`

@@ -15,11 +15,11 @@
 [Gitea config-repo] ◀──image tag 커밋── Jenkins
        │
        ▼  (ArgoCD가 Gitea config-repo 를 직접 HTTPS 감시)
-[ArgoCD(NKS infra노드)] ──sync──▶ [NKS] dev/prd 노드에 배포 (NCR 에서 pull)
+[ArgoCD(NKS ops노드)] ──sync──▶ [NKS] dev/prd 노드에 배포 (NCR 에서 pull)
 ```
 
 - **CI = Jenkins**(빌드·NCR push·config-repo 태그 커밋). **CD = ArgoCD**(config-repo 감시 → NKS 동기화).
-- 노드 격리: `env=ops`(8GB, taint 없음 → ArgoCD·모니터링), `env=dev`/`env=prd`(4GB, `NoSchedule` taint).
+- 노드 격리: `env=ops`(8GB, `env=ops:NoSchedule` taint, 플랫폼 전용), `env=dev`/`env=prd`(4GB, `NoSchedule` taint).
 
 ## 환경 사실 (이 검증 시점)
 
@@ -65,16 +65,19 @@ NKS ↔ POC 는 **단절**되어 있고 NKS 는 **인터넷 egress 만** 가능�
 ## 1. NKS 노드 라벨 + taint (환경 격리)
 
 ```bash
-# 8GB=ops(라벨만, taint 없음 → 시스템 애드온/ArgoCD/모니터링 수용), 4GB×2=dev/prd(NoSchedule)
+# 8GB=ops(전용 플랫폼 노드), 4GB×2=dev/prd. 각 노드에 env=<e>:NoSchedule taint(운영은 노드그룹 생성 시 지정).
 kubectl label node <ops-node> env=ops --overwrite
-kubectl label node <dev-node>   env=dev   --overwrite
-kubectl label node <prd-node>   env=prd   --overwrite
+kubectl label node <dev-node> env=dev --overwrite
+kubectl label node <prd-node> env=prd --overwrite
+kubectl taint node <ops-node> env=ops:NoSchedule --overwrite
 kubectl taint node <dev-node> env=dev:NoSchedule --overwrite
 kubectl taint node <prd-node> env=prd:NoSchedule --overwrite
 ```
-> **ops 노드는 taint 를 걸지 않는다.** NKS 관리형 시스템 애드온(CoreDNS·calico-typha·konnectivity 등)이
-> 워커에 떠 있어, 3노드 전부 `NoSchedule` 로 막으면 재스케줄 시 갈 곳이 없어 DNS 등이 깨질 수 있다.
-> dev/prd 만 taint 하면, taint 없는 infra 로 시스템 파드·ArgoCD·모니터링이 자연히 모인다.
+> **ops 는 taint 된 전용 플랫폼 노드다.** ArgoCD/모니터링/Ingress 는 `nodeSelector env=ops` + `toleration env=ops`
+> 로 ops 에만 배치된다(앱은 ops taint 미tolerate → 배제).
+> ⚠ ops taint 시 NKS 관리형 애드온이 갈 곳 필요: CoreDNS·calico-typha·konnectivity 는 모든 taint 를
+> tolerate(op=Exists)해 ops 에서 OK. 단 `calico-kube-controllers` 처럼 blanket toleration 이 없는 것은
+> **untainted 시스템 nodepool** 을 두거나 `env=ops` toleration 을 추가해야 한다.
 
 ## 2. Jenkins — NCR 자격증명 + 파이프라인(build → NCR push → config-repo 갱신)
 
@@ -148,7 +151,7 @@ config-repo (branches)
 
 ## 5. ArgoCD 설치 + repo + env AppProject/Application (dev/test/prd)
 
-### 5-1. 설치 (ops 노드에 자동 배치 — taint 없는 유일 노드)
+### 5-1. 설치 (ops 노드 배치 — nodeSelector env=ops + toleration env=ops)
 ```bash
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml

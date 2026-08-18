@@ -15,19 +15,19 @@ NKS 클러스터 쪽 작업을 **로컬에서 kubectl+helm 으로 재현**하는
 
 ## 노드 taint 스킴 — dev / test / prd / ops
 
-**taint 의 목적 = 앱 배포 격리 전용.** `env` 라벨/taint 키로 구분한다.
-- **dev/test/prd = 워크로드 노드**: `env=<e>` 라벨 + `env=<e>:NoSchedule` taint. 앱은 `nodeSelector {env:<e>}`
-  + `tolerations env=<e>` 로 해당 노드에만 배치.
-- **ops = 플랫폼 노드**: `env=ops` **라벨만(taint 없음)**. ArgoCD·모니터링·Ingress 는 `nodeSelector env=ops`
-  로 여기에 배치되고, **NKS 시스템 애드온(CoreDNS·calico-typha·konnectivity 등)도 taint 영향 없이** ops 에 스케줄된다.
+`env` 라벨/taint 키로 노드를 4구분. **각 노드에 `env=<e>:NoSchedule` taint** 를 걸어 워크로드를 격리한다.
+- **dev/test/prd = 워크로드 노드**: 앱은 `nodeSelector {env:<e>}` + `tolerations env=<e>` 로 해당 노드에만.
+- **ops = 전용 플랫폼 노드**(`env=ops:NoSchedule`): **ArgoCD·모니터링·Ingress** 는 `nodeSelector env=ops`
+  + **`toleration env=ops`** 로 ops 에만 배치. 앱은 ops taint 를 tolerate 하지 않아 배제된다.
 
-> 즉 taint 는 앱(dev/test/prd)만 격리하고, **플랫폼/시스템 컴포넌트는 taint 의 영향을 전혀 받지 않는다.**
+> ⚠ **ops 를 taint 하면 NKS 관리형 애드온이 갈 곳이 필요하다.** CoreDNS·calico-typha·konnectivity 는 모든
+> taint 를 tolerate(op=Exists)해 ops 에서도 문제없으나, blanket toleration 이 없는 것(예: `calico-kube-controllers`)은
+> **untainted 시스템 nodepool** 을 두거나 해당 애드온에 `env=ops` toleration 을 추가해야 한다.
 
 **taint 적용 주체** (`.env` 의 `APPLY_TAINT`):
-- **운영** `APPLY_TAINT=false`: taint 는 **NKS 노드그룹 생성 시** 지정(dev/test/prd `env=<e>:NoSchedule`, ops 없음).
-  `01-label-taint-nodes.sh` 는 라벨만 적용. (노드 교체·오토스케일에도 taint 유지되는 정석.)
-- **테스트** `APPLY_TAINT=true`(기본): 스크립트가 dev/test/prd taint 까지 적용. ops 는 두 경우 모두 라벨만.
-> 이 때문에 관리형 애드온이 스케줄 불가로 깨지는 문제가 없다.
+- **운영** `APPLY_TAINT=false`: taint 는 **NKS 노드그룹 생성 시** 지정(dev/test/prd/ops 각 `env=<e>:NoSchedule`).
+  `01-label-taint-nodes.sh` 는 라벨만 적용.
+- **테스트** `APPLY_TAINT=true`(기본): 스크립트가 dev/test/prd/ops 전부에 taint 적용.
 
 ## 실행 순서
 
@@ -38,7 +38,7 @@ vi .env
 # (사전) config-repo 환경 브랜치 초기화 (Gitea) — 최초 1회
 CONFIG_REPO_URL=acme-gitea:admin/config-repo.git NCR_REGISTRY=<host> ../gitops/config-repo-init.sh
 
-./scripts/01-label-taint-nodes.sh    # 노드 env label + taint (dev/test/prd; ops 는 라벨만)
+./scripts/01-label-taint-nodes.sh    # 노드 env label + taint (dev/test/prd + ops; ops=플랫폼 전용)
 ./scripts/02-ncr-pull-secret.sh      # 워크로드 ns + NCR imagePullSecret(ncr-cred)
 ./scripts/03-install-ingress.sh      # ingress-nginx(LoadBalancer) → LB 공인 IP(.env 자동기록)
 ./scripts/04-install-argocd.sh       # ArgoCD(ops) + config-repo 등록 + Application(dev/test/prd)

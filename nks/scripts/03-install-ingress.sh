@@ -7,13 +7,15 @@ need helm
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
 helm repo update >/dev/null 2>&1
 
-# ops 배치 (env=ops nodeSelector). ops 는 taint 없음 → toleration 불필요.
+# ops 전용 노드 배치: nodeSelector env=ops + toleration env=ops(taint).
 OV="$(mktemp)"; cat > "$OV" <<YAML
 controller:
   nodeSelector: { ${ENV_KEY}: ops }
+  tolerations: [ { key: ${ENV_KEY}, value: ops, effect: NoSchedule } ]
   admissionWebhooks:
     patch:
       nodeSelector: { ${ENV_KEY}: ops }
+      tolerations: [ { key: ${ENV_KEY}, value: ops, effect: NoSchedule } ]
   service: { type: LoadBalancer }
   resources: { requests: { cpu: 50m, memory: 128Mi } }
 YAML
