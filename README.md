@@ -68,18 +68,21 @@ CLI/REST API로 무인 초기화**되도록 구성했습니다.
 클론용 포트(기본 2222), Jenkins의 에이전트(JNLP) 포트(기본 50000)는 HTTP가 아니므로 nginx를
 거치지 않고 그대로 직접 노출됩니다.
 
-각 디렉터리에는 문서가 두 종류 있습니다.
+각 디렉터리에는 다음 문서가 있습니다. `Docker/` 는 `MANUAL.md`(설치/검증), 서비스 3종
+(GitServer/Jenkins/Nexus)은 **역할별 문서**(`BUILD`=구축 / `ADMIN`=운영 / `USER`=사용자)로 구성됩니다.
 
 - `README.md` : 로컬 PC 작업부터 VM 작업까지 전체 흐름 개요
-- `MANUAL.md` : **VM에 파일이 이미 전달된 이후** 설치/구동·초기화·검증·트러블슈팅·백업·업그레이드를
-  다루는 VM 관리자용 실행 매뉴얼 (실제 운영 시에는 이 문서를 기준으로 진행)
+- `BUILD.md`(서비스) / `MANUAL.md`(Docker) : 설치/구동·초기화·검증·트러블슈팅
+- `ADMIN.md` : 운영자용(계정·저장소·백업) · `USER.md` : 사용자/개발자용(clone/push 등)
 
-| 디렉터리 | 개요 | VM 실행 매뉴얼 |
-|---|---|---|
-| Docker | [README.md](Docker/README.md) | [MANUAL.md](Docker/MANUAL.md) |
-| GitServer | [README.md](GitServer/README.md) | [MANUAL.md](GitServer/MANUAL.md) |
-| Jenkins | [README.md](Jenkins/README.md) | [MANUAL.md](Jenkins/MANUAL.md) |
-| Nexus | [README.md](Nexus/README.md) | [MANUAL.md](Nexus/MANUAL.md) |
+> 상위 통합본: [BUILDER.md](BUILDER.md) / [OPERATOR.md](OPERATOR.md) / [USER.md](USER.md).
+
+| 디렉터리 | 개요 | 구축 | 운영 | 사용자 |
+|---|---|---|---|---|
+| Docker | [README](Docker/README.md) | [MANUAL](Docker/MANUAL.md) | — | — |
+| GitServer | [README](GitServer/README.md) | [BUILD](GitServer/BUILD.md) | [ADMIN](GitServer/ADMIN.md) | [USER](GitServer/USER.md) |
+| Jenkins | [README](Jenkins/README.md) | [BUILD](Jenkins/BUILD.md) | [ADMIN](Jenkins/ADMIN.md) | [USER](Jenkins/USER.md) |
+| Nexus | [README](Nexus/README.md) | [BUILD](Nexus/BUILD.md) | [ADMIN](Nexus/ADMIN.md) | [USER](Nexus/USER.md) |
 
 ## 시작하기 전에
 
@@ -96,6 +99,6 @@ CLI/REST API로 무인 초기화**되도록 구성했습니다.
 
 - Jenkins 플러그인 오프라인 설치 (Update Center 접근 불가로 별도 진행 필요)
 - Nexus를 Maven/npm/Docker 등 프록시 저장소로 구성하여 Jenkins/빌드에서 활용
-- 자체 서명 인증서 대신 사내 내부 CA로 발급받은 인증서 사용 (각 디렉터리 `MANUAL.md` 의
-  "내부 CA로 발급받은 인증서로 교체하기" 참고 — `certs/server.crt`/`server.key` 교체 후 nginx만 재시작)
+- 자체 서명 인증서 대신 사내 내부 CA로 발급받은 인증서 사용
+  (각 디렉터리 `certs/server.crt`/`server.key` 를 내부 CA 발급본으로 교체한 뒤 nginx 컨테이너만 재시작)
 - 외부 DB(PostgreSQL 등) 연동, 백업 자동화 등 운영 고도화
