@@ -52,7 +52,7 @@ CONFIG_REPO_URL=acme-gitea:admin/config-repo.git ./tools/promote-image.sh prd  <
 
 ## 노드/스케줄
 
-- taint 는 **앱 배포 격리 전용**(dev/test/prd `NoSchedule`). ops 는 env=ops:NoSchedule taint(플랫폼 전용) — ArgoCD·모니터링·Ingress 는 toleration env=ops 로 배치.
+- taint 는 **앱 배포 격리 전용**(dev/test/prd `NoSchedule`). ops 는 taint 없음(ArgoCD·모니터링·시스템).
 - 노드 추가/교체 시 라벨/taint 재적용: `nks/scripts/01-label-taint-nodes.sh`. 사양: [`gitops/cluster/nodepools.nks.md`](gitops/cluster/nodepools.nks.md).
 
 ## 백업 / 업그레이드
@@ -69,6 +69,6 @@ CONFIG_REPO_URL=acme-gitea:admin/config-repo.git ./tools/promote-image.sh prd  <
 | 이미지 `ImagePullBackOff` | 네임스페이스 `ncr-cred` 유무, 레지스트리(kr1) 정확성 |
 | 앱 파드 `Pending` | env taint 대응 `nodeSelector/tolerations`, 해당 env 노드 유무 |
 | Jenkins 플러그인 미로드 | 코어≥2.504.3, plugins 넣고 **재기동** |
-| 시스템 파드 Pending(DNS 등) | ops taint 시 관리형 애드온이 갈 곳 필요 — CoreDNS 등은 all-taint tolerate(OK), calico-kube-controllers 는 ops toleration 추가 또는 시스템 nodepool |
+| 시스템 파드 Pending(DNS 등) | ops 노드에 taint 걸지 말 것(무-taint 유지) |
 
 - 사용자 온보딩/개발 흐름: [`USER.md`](USER.md) · 구축 재현: [`BUILDER.md`](BUILDER.md)

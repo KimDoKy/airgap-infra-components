@@ -2,7 +2,7 @@
 
 > **대상 클러스터 = NHN Cloud NKS.** 테스트는 **3노드(ops/dev/prd) 최소 구성**으로 진행하며, 노드
 > 사양·label·taint 는 [`cluster/nodepools.nks.md`](cluster/nodepools.nks.md) 가 기준이다. 관측은 **B안
-> (Prometheus + Grafana)** 를 `acme-ops` 노드(2 vCPU/8GB, env=ops:NoSchedule taint)에 올린다.
+> (Prometheus + Grafana)** 를 `acme-ops` 노드(2 vCPU/8GB, taint 없음)에 올린다.
 > (`cluster/nodegroups.eksctl.yaml` 은 과거 EKS 검토 시의 **레거시 참고용** — 활성 경로는 NKS.)
 >
 > **✅ 실측 검증 완료(2026-08-13) — Git→Jenkins→Nexus→NCR→ArgoCD→NKS 전체 배포 플로우 hands-on:
@@ -28,7 +28,7 @@ gitops/                         ← GitOps repo 루트
 └── cluster/                    # 클러스터 1회 준비
     ├── nodepools.nks.md        #   ★ NKS 노드풀 사양(ops/dev/prd) + label/taint — 활성 기준
     ├── namespaces.yaml         #   환경 네임스페이스
-    ├── node-taints.sh          #   label+taint 폴백(ops 포함 env taint)
+    ├── node-taints.sh          #   label+taint 폴백(ops 무-taint)
     └── nodegroups.eksctl.yaml  #   (레거시) EKS 노드그룹 참고용
 ```
 

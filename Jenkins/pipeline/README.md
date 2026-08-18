@@ -20,7 +20,7 @@ Jenkins @ cicd ── 에이전트 컨테이너(node+docker+git, docker.sock Doo
 ```
 - **CI/CD 분리**: Jenkins 는 NKS 에 접근하지 않음. config-repo 의 이미지 태그만 커밋.
 - 환경 매핑(git ref → env): `dev`→dev, `test`→test, `main`/tag `v*`→prd. (Jenkinsfile `Resolve env`)
-- dev/test/prd 분리(배포는 ArgoCD): **namespace(논리)** + **노드 taint/label `env=<env>`(물리)**. ops 는 env=ops taint(플랫폼 전용, toleration 보유).
+- dev/test/prd 분리(배포는 ArgoCD): **namespace(논리)** + **노드 taint/label `env=<env>`(물리)**. ops 는 taint 없음(플랫폼).
 
 ## 트리거 (권장: 폴링)
 

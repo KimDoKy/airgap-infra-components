@@ -1,26 +1,22 @@
-# 플랫폼(모니터링)은 **taint 된 ops 전용 노드**에 배치: nodeSelector env=ops + toleration env=ops:NoSchedule.
-#   ops 노드는 env=ops:NoSchedule taint → 플랫폼/시스템(ops toleration 보유)만 스케줄, 앱(dev/test/prd)은 배제.
+# 플랫폼(모니터링)은 ops 노드에 배치(nodeSelector env=ops). ops 는 taint 없음 → toleration 불필요.
+# taint 는 앱(dev/test/prd) 격리 전용이므로 플랫폼은 taint 메커니즘과 무관.
 # (Grafana ingress/root_url 은 nks/scripts/06-expose-monitoring.sh 가 LB_IP 확정 후 붙인다.)
 alertmanager:
   enabled: false
 prometheusOperator:
   nodeSelector: { env: ops }
-  tolerations: [ { key: env, value: ops, effect: NoSchedule } ]
   admissionWebhooks:
     patch:
       nodeSelector: { env: ops }
-      tolerations: [ { key: env, value: ops, effect: NoSchedule } ]
 prometheus:
   prometheusSpec:
     nodeSelector: { env: ops }
-    tolerations: [ { key: env, value: ops, effect: NoSchedule } ]
     retention: 2d
     resources:
       requests: { cpu: 100m, memory: 400Mi }
       limits: { memory: 1200Mi }
 grafana:
   nodeSelector: { env: ops }
-  tolerations: [ { key: env, value: ops, effect: NoSchedule } ]
   adminPassword: "<GRAFANA_PW>"
   service: { type: ClusterIP }
   resources:
@@ -28,7 +24,6 @@ grafana:
     limits: { memory: 384Mi }
 kube-state-metrics:
   nodeSelector: { env: ops }
-  tolerations: [ { key: env, value: ops, effect: NoSchedule } ]
 prometheus-node-exporter:
   tolerations:
-    - operator: Exists   # DaemonSet: dev/test/prd/ops 전 노드 커버(모든 taint tolerate)
+    - operator: Exists   # DaemonSet: dev/test/prd taint 노드까지 전 노드 커버

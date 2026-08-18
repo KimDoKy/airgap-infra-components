@@ -11,8 +11,7 @@ helm repo update >/dev/null 2>&1
 
 OV="$(mktemp)"; cat > "$OV" <<YAML
 global:
-  nodeSelector: { ${ENV_KEY}: ops }   # ops 전용 노드
-  tolerations: [ { key: ${ENV_KEY}, value: ops, effect: NoSchedule } ]   # ops taint 허용
+  nodeSelector: { ${ENV_KEY}: ops }   # ops 는 taint 없음 → toleration 불필요
 configs:
   cm:
     accounts.developer: apiKey,login

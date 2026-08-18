@@ -137,13 +137,12 @@ SCM 폴링 잡 생성·실행까지 **hands-on 절차와 정상 출력**은 [`Je
 > 전제: NKS 클러스터(노드 3+개) 생성 완료, 로컬 `kubectl` 이 해당 컨텍스트, **Gitea SG 인바운드에 NKS 노드
 > CIDR → TCP 443** 허용(ArgoCD→config-repo). 상세: [`gitops/nks-deploy-flow.md`](gitops/nks-deploy-flow.md).
 >
-> **★ 노드 taint 정책(운영 vs 테스트)** — dev/test/prd/**ops 모두** `env=<e>:NoSchedule`:
-> - **운영**: taint 는 **NKS 노드그룹 생성 시** 지정(노드 교체·오토스케일에도 유지). `.env` 에
->   **`APPLY_TAINT=false`** → `01-label-taint-nodes.sh` 는 **라벨만** 적용.
-> - **테스트**: `APPLY_TAINT=true`(기본) → 스크립트가 dev/test/prd/ops 전부에 taint.
-> - **ops = 전용 플랫폼 노드**: ArgoCD/모니터링/Ingress 는 `nodeSelector env=ops` + **`toleration env=ops`** 로 배치.
-> - ⚠ ops taint 시 NKS 관리형 애드온이 갈 곳 필요 — CoreDNS·calico-typha·konnectivity 는 all-taint tolerate(OK),
->   `calico-kube-controllers` 처럼 아닌 것은 **untainted 시스템 nodepool** 또는 ops toleration 추가.
+> **★ 노드 taint 정책(운영 vs 테스트)**:
+> - **운영**: taint 는 **NKS 노드그룹 생성 시** 지정한다(노드 교체·오토스케일에도 유지). 노드그룹별로
+>   dev/test/prd = `env=<e>:NoSchedule`, **ops 노드그룹은 taint 없음**(플랫폼/시스템용). 이때 `.env` 에
+>   **`APPLY_TAINT=false`** → `01-label-taint-nodes.sh` 는 **라벨만** 적용(taint 미적용).
+> - **테스트**: `APPLY_TAINT=true`(기본) → 스크립트가 dev/test/prd 에 taint 까지 건다.
+> - 라벨 `env=<e>` 는 두 경우 모두 스크립트가 적용(앱/플랫폼 `nodeSelector` 매칭). ops 는 항상 라벨만.
 
 ```bash
 # (사전) config-repo 환경 브랜치 초기화 — Gitea 준비(2절) 후 1회
@@ -151,7 +150,7 @@ CONFIG_REPO_URL=acme-gitea:admin/config-repo.git NCR_REGISTRY=<host> \
   ./gitops/config-repo-init.sh
 
 cd nks && cp .env.example .env && vi .env   # 노드 이름/NCR/Gitea/비번/APPLY_TAINT 채움
-./scripts/01-label-taint-nodes.sh   # 노드 label + taint (dev/test/prd + ops; 운영은 노드그룹 지정)
+./scripts/01-label-taint-nodes.sh   # 노드 label (+ 테스트는 dev/test/prd taint), ops 라벨만
 ./scripts/02-ncr-pull-secret.sh     # 워크로드 ns + NCR imagePullSecret
 ./scripts/03-install-ingress.sh     # ingress-nginx(LB) → LB 공인 IP(.env 자동기록)
 ./scripts/04-install-argocd.sh      # ArgoCD(ops) + repo + env AppProject/Application(prd 수동) + RBAC
@@ -161,7 +160,7 @@ cd nks && cp .env.example .env && vi .env   # 노드 이름/NCR/Gitea/비번/APP
 ./scripts/99-verify.sh              # 통합 검증
 ```
 **정상 확인**(`99-verify.sh`):
-- 노드: dev/prd/ops 모두 `env=<e>:NoSchedule` taint. 플랫폼은 ops toleration 으로 ops 배치. 앱 파드가 각 env 노드에 배치.
+- 노드: dev/prd(=`env` taint) / ops(taint 없음). 앱 파드가 각 env 노드에 배치.
 - ArgoCD Applications `Synced/Healthy`(prd 는 자동 아님=수동). node-exporter DS `3/3`.
 - Ingress LB 공인 IP + `https://grafana.<LB>.nip.io` / `.../prometheus...` / `.../argocd...`.
 
