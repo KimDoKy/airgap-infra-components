@@ -19,13 +19,13 @@
 ```
 
 - **CI = Jenkins**(빌드·NCR push·config-repo 태그 커밋). **CD = ArgoCD**(config-repo 감시 → NKS 동기화).
-- 노드 격리: `role=infra`(8GB, taint 없음 → ArgoCD·모니터링), `env=dev`/`env=prd`(4GB, `NoSchedule` taint).
+- 노드 격리: `env=ops`(8GB, taint 없음 → ArgoCD·모니터링), `env=dev`/`env=prd`(4GB, `NoSchedule` taint).
 
 ## 환경 사실 (이 검증 시점)
 
 | 항목 | 값 |
 |---|---|
-| NKS 노드 | `...default-worker-node-0`(<NKS_NODE_IP>, m2.c2m4)=dev, `...default-worker-node-1`(<NKS_NODE_IP>, m2.c2m4)=prd, `...node-02-node-0`(<NKS_NODE_IP>, r2.c2m8)=infra |
+| NKS 노드 | `...default-worker-node-0`(<NKS_NODE_IP>, m2.c2m4)=dev, `...default-worker-node-1`(<NKS_NODE_IP>, m2.c2m4)=prd, `...node-02-node-0`(<NKS_NODE_IP>, r2.c2m8)=ops |
 | NKS 노드 서브넷 | `<NKS_NODE_CIDR>` (SG 출발지로 사용) |
 | NKS 파드 네트워크 | `<POD_CIDR>` (Calico) |
 | NCR 레지스트리 | `<NCR_REGISTRY_HOST>/acme-poc` (**kr1**) |
@@ -65,14 +65,14 @@ NKS ↔ POC 는 **단절**되어 있고 NKS 는 **인터넷 egress 만** 가능�
 ## 1. NKS 노드 라벨 + taint (환경 격리)
 
 ```bash
-# 8GB=infra(라벨만, taint 없음 → 시스템 애드온/ArgoCD/모니터링 수용), 4GB×2=dev/prd(NoSchedule)
-kubectl label node <infra-node> role=infra --overwrite
+# 8GB=ops(라벨만, taint 없음 → 시스템 애드온/ArgoCD/모니터링 수용), 4GB×2=dev/prd(NoSchedule)
+kubectl label node <ops-node> env=ops --overwrite
 kubectl label node <dev-node>   env=dev   --overwrite
 kubectl label node <prd-node>   env=prd   --overwrite
 kubectl taint node <dev-node> env=dev:NoSchedule --overwrite
 kubectl taint node <prd-node> env=prd:NoSchedule --overwrite
 ```
-> **infra 노드는 taint 를 걸지 않는다.** NKS 관리형 시스템 애드온(CoreDNS·calico-typha·konnectivity 등)이
+> **ops 노드는 taint 를 걸지 않는다.** NKS 관리형 시스템 애드온(CoreDNS·calico-typha·konnectivity 등)이
 > 워커에 떠 있어, 3노드 전부 `NoSchedule` 로 막으면 재스케줄 시 갈 곳이 없어 DNS 등이 깨질 수 있다.
 > dev/prd 만 taint 하면, taint 없는 infra 로 시스템 파드·ArgoCD·모니터링이 자연히 모인다.
 
@@ -148,7 +148,7 @@ config-repo (branches)
 
 ## 5. ArgoCD 설치 + repo + env AppProject/Application (dev/test/prd)
 
-### 5-1. 설치 (infra 노드에 자동 배치 — taint 없는 유일 노드)
+### 5-1. 설치 (ops 노드에 자동 배치 — taint 없는 유일 노드)
 ```bash
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
@@ -184,10 +184,10 @@ spec:
   syncPolicy: { automated: { prune: true, selfHeal: true }, syncOptions: [ CreateNamespace=true ] }
 ```
 
-## 6. 모니터링 (Prometheus + Grafana) — infra 노드 고정
+## 6. 모니터링 (Prometheus + Grafana) — ops 노드 고정
 
 kube-prometheus-stack(helm)을 `monitoring` ns 에 설치. prometheus/grafana/kube-state-metrics/operator 는
-`nodeSelector role=infra`, **node-exporter(DaemonSet)는 전 노드 커버 위해 `tolerations: [{operator: Exists}]`**.
+`nodeSelector env=ops`, **node-exporter(DaemonSet)는 전 노드 커버 위해 `tolerations: [{operator: Exists}]`**.
 alertmanager 비활성·저자원. 기본 StorageClass 없어 Prometheus 는 emptyDir(테스트). values: [`../gitops/monitoring/values.yaml`](monitoring/values.yaml).
 
 ```bash
@@ -211,7 +211,7 @@ helm upgrade --install kps prometheus-community/kube-prometheus-stack \
 | ArgoCD | `kubectl get app -n argocd` | dev/prd 모두 **Synced/Healthy** |
 | **노드 격리** | dev 앱→dev 노드(env=dev), prd 앱→prd 노드(env=prd) | ✅ 각 env 노드에 정확히 배치 |
 | 서빙 | `curl http://test-app`(각 ns) | `acme build dependency payload...`(Nexus 패키지) |
-| 모니터링 | grafana/prometheus/ksm/operator=infra, node-exporter=3/3 | Prometheus 타깃 up, Grafana health 200 |
+| 모니터링 | grafana/prometheus/ksm/operator=ops, node-exporter=3/3 | Prometheus 타깃 up, Grafana health 200 |
 
 ## 문제 해결
 
@@ -223,4 +223,4 @@ helm upgrade --install kps prometheus-community/kube-prometheus-stack \
 | Jenkins 빌드 Nexus `401` | 잡 `NEXUS_PW` 미설정/오설정(placeholder 치환 실패). ci 자격 확인 |
 | 앱 파드 `Pending` | env taint 대응 `tolerations`/`nodeSelector` 누락, 또는 해당 env 노드 없음 |
 | node-exporter 일부 노드 누락 | DaemonSet `tolerations: [{operator: Exists}]` 없어 dev/prd(taint) 미배치 |
-| CoreDNS 등 시스템 파드 Pending | infra 노드까지 `NoSchedule` taint 를 걸어버림 → infra 는 taint 금지 |
+| CoreDNS 등 시스템 파드 Pending | ops 노드까지 `NoSchedule` taint 를 걸어버림 → infra 는 taint 금지 |

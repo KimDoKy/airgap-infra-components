@@ -8,9 +8,9 @@
 
 | 노드풀 | 역할 | vCPU | Mem | Storage(블록·루트) | NKS 플레이버(예상) |
 |---|---|---:|---:|---:|---|
-| `acme-infra` | ArgoCD + 관측(Prometheus/Grafana) + ingress | **2** | **8 GB** | **50 GB** | `m2.c2m8` |
+| `acme-ops` | ArgoCD + 관측(Prometheus/Grafana) + ingress | **2** | **8 GB** | **50 GB** | `m2.c2m8` |
 | `acme-dev`   | dev 환경 앱(sample-app frontend+backend)      | **2** | **4 GB** | **50 GB** | `m2.c2m4` |
-| `acme-prd`   | prod 환경 앱                                   | **2** | **4 GB** | **50 GB** | `m2.c2m4` |
+| `acme-prd`   | prd 환경 앱                                   | **2** | **4 GB** | **50 GB** | `m2.c2m4` |
 
 **합계: 6 vCPU / 16 GB / 150 GB** · 각 노드풀 노드 수 = 1 (테스트).
 
@@ -18,7 +18,7 @@
 >   NHN 플레이버는 OpenStack 표기(`m2.c<코어>m<메모리>`) — `m2.c2m8`=2코어·8GB, `m2.c2m4`=2코어·4GB.
 > - **1 vCPU / 2GB 는 금지.** NKS 워커는 kubelet·CNI·kube-proxy·CoreDNS 등 시스템 예약으로 노드당
 >   ~0.5~1 vCPU, ~1~1.5GB 를 먼저 잡아먹어, 2GB 노드는 앱을 거의 못 띄운다. 최소 바닥 = 2 vCPU / 4GB.
-> - **Storage** 는 워커의 블록스토리지(Cinder) **루트디스크**. `acme-infra` 는 ArgoCD/관측/이미지 캐시로
+> - **Storage** 는 워커의 블록스토리지(Cinder) **루트디스크**. `acme-ops` 는 ArgoCD/관측/이미지 캐시로
 >   소모가 크니 50GB 권장. dev/prd 는 30GB 도 되지만 이미지 churn 고려해 50GB 로 통일.
 
 ### 루트 스토리지 타입/크기
@@ -31,11 +31,11 @@
 - **관측 데이터는 루트디스크에 두지 않는다.** Prometheus TSDB/Grafana 는 **별도 PVC(블록스토리지)** 로 뺀다:
   emptyDir(노드 루트)에 두면 pod 재시작·노드 교체 시 메트릭 소실 + 루트디스크 잠식.
   - NKS 기본 CSI StorageClass 로: **Prometheus ~20~30GB(SSD), Grafana ~5GB(SSD)** PVC 프로비저닝.
-  - 따라서 `acme-infra` 루트도 50GB 로 고정하고, 관측 보존량은 PVC 크기로 조절한다.
+  - 따라서 `acme-ops` 루트도 50GB 로 고정하고, 관측 보존량은 PVC 크기로 조절한다.
 
 ## 왜 이 사이징인가
 
-- **`acme-infra` 만 8GB**: "자원 관측 + 배포 컴포넌트"를 이 노드에 몰았다.
+- **`acme-ops` 만 8GB**: "자원 관측 + 배포 컴포넌트"를 이 노드에 몰았다.
   - ArgoCD 풀스택(server/repo-server/application-controller/redis) 실사용 ~2GB.
   - **관측 스택(B안 확정): Prometheus + Grafana** — Prometheus 하나가 2GB+ 를 쓴다. 시스템 예약(~1.3GB)
     까지 감안하면 4GB 로는 불가 → **8GB 필요**.
@@ -49,18 +49,19 @@
 
 | 노드풀 | label | taint | 올라갈 것 |
 |---|---|---|---|
-| `acme-infra` | `role=infra` | `role=infra:NoSchedule` | ArgoCD(`argocd` ns), 관측(`monitoring` ns), ingress |
+| `acme-ops` | `env=ops` | **(taint 없음)** | ArgoCD(`argocd` ns), 관측(`monitoring` ns), ingress |
 | `acme-dev`   | `env=dev`    | `env=dev:NoSchedule`     | `acme-app-dev` ns 앱 |
 | `acme-prd`   | `env=prd`    | `env=prd:NoSchedule`     | `acme-app-prd` ns 앱 |
 
-- **label** → helm `nodeSelector`(env=dev/prd) 및 infra 워크로드의 `nodeSelector: {role: infra}` 매칭.
-- **taint** → 해당 노드엔 대응 `toleration` 을 가진 pod 만 스케줄(다른 환경 pod 배제).
-  - infra 워크로드(ArgoCD/관측)는 `role=infra` toleration + `nodeSelector role=infra` 를 갖도록 설정.
-  - dev/prd 앱은 helm values 의 `tolerations`/`nodeSelector`(env) 로 이미 처리(values-<env>.yaml 참고).
+- **label** → 앱/플랫폼의 `nodeSelector` 매칭(dev/prd 앱=`env=dev|prd`, 플랫폼=`nodeSelector: {env: ops}`).
+- **taint 는 앱 배포 격리 전용** → dev/prd 만 `NoSchedule`. **`acme-ops` 는 taint 없음**: ArgoCD/관측/ingress
+  및 NKS 시스템 애드온(CoreDNS 등)이 taint 영향 없이 스케줄된다(→ 플랫폼은 `nodeSelector env=ops` 만, toleration 불필요).
+  - dev/prd 앱은 매니페스트의 `nodeSelector env=<e>` + `tolerations env=<e>` 로 해당 노드에만 배치
+    (config-repo 환경 브랜치의 `apps/test-app/deployment.yaml`).
 
 ## 스테이징(test) 관련
 
-기존 gitops 는 dev/test/prd 3환경 스캐폴드지만, **이 테스트 클러스터는 infra/dev/prod 3노드라 test 는
+기존 gitops 는 dev/test/prd 3환경 스캐폴드지만, **이 테스트 클러스터는 ops/dev/prd 3노드라 test 는
 스케줄 대상이 아니다.** `values-test.yaml` / `application-test.yaml` / test 네임스페이스 정의는 **그대로 두되
 이 클러스터엔 배포하지 않는다**(test 노드풀이 없어 `env=test` toleration pod 는 Pending 이 됨).
 

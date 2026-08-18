@@ -58,7 +58,7 @@ Gitea→cicd 인바운드는 열지 않는다(Jenkins 는 NCR push 자격을 가
 - **앱 저장소**(Gitea `acme-app`): `frontend/ backend/`(각 Dockerfile) + `Jenkinsfile` + `pipeline/`.
   CI 가 브랜치 push 시 두 컴포넌트 빌드→NCR→config-repo 태그 커밋.
 - **GitOps 저장소**(Gitea `config-repo`): [`gitops/`](../../gitops/README.md) 참고. ArgoCD 가 watch.
-  CI 는 `apps/<app>-<env>/deployment.yaml` 의 image tag 를 커밋.
+  CI 는 config-repo **dev 브랜치**의 `apps/test-app/deployment.yaml` image tag 를 커밋(test/prd 는 승격).
 
 ## 구성 파일
 

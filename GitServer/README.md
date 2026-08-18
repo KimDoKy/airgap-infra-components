@@ -33,4 +33,4 @@ Git 을 사용하는 구성. 웹 UI·HTTPS·토큰은 사용하지 않으며, �
 | **관리자** | [ADMIN.md](ADMIN.md) | 사용자 온보딩/차단, 계정·저장소 관리, 운영·백업 |
 | **사용자** | [USER.md](USER.md) | `~/.ssh/config` 설정, clone/push/pull |
 
-동작 테스트 예시: [Test/test-commands.sh](Test/test-commands.sh)
+동작 테스트: 게이트웨이 키를 가진 PC 에서 `git clone acme-gitea:admin/<repo>.git` (상세: [BUILD.md](BUILD.md) 4절 검증).

@@ -5,8 +5,8 @@
 Nexus 에서 패키지를 내려받아 이미지를 만들고, 그 결과(이미지 태그)를 다시 GitServer 의 config-repo 에
 반영하는 전 과정을 사람이 그대로 재현할 수 있도록 정리한다. (실측 통과: 2026-07-31)
 
-> 역할 분리: **Jenkins = CI 만** 담당(빌드까지). **CD 는 ArgoCD** 가 config-repo 를 감시해 EKS 에 배포.
-> 이 문서는 CI 구간(및 config-repo 갱신까지)만 검증한다. ECR push / ArgoCD 배포는 표기만 한다.
+> 역할 분리: **Jenkins = CI 만** 담당(빌드까지). **CD 는 ArgoCD** 가 config-repo 를 감시해 NKS 에 배포.
+> 이 문서는 CI 구간(및 config-repo 갱신까지)만 검증한다. NCR push / ArgoCD 배포는 표기만 한다.
 
 ## 시나리오
 
@@ -21,7 +21,7 @@ Nexus 에서 패키지를 내려받아 이미지를 만들고, 그 결과(이미
  [GitServer]        │  ci-build-scm.sh (Freestyle+GitSCM 잡)                    │
   config-repo ◀push─┼── image.tag = b<빌드번호>-<소스SHA> 갱신 커밋                │
                     └───────────────────────────────────────────────────────────┘
-          ▲ (추후) ArgoCD 가 config-repo 를 감시하여 EKS 에 배포
+          ▲ (추후) ArgoCD 가 config-repo 를 감시하여 NKS 에 배포
 ```
 
 - **① GitServer 연동(입력/트리거)**: `test-app` 새 커밋을 **폴링으로 감지 → 자동 빌드**, 소스 clone.
@@ -31,7 +31,7 @@ Nexus 에서 패키지를 내려받아 이미지를 만들고, 그 결과(이미
   `docker build --network host` 로 빌드 컨테이너가 이 로컬 터널을 보게 한다.
 - **트리거 방식 = SCM 폴링(B)**: 폐쇄망에서 GitServer→Jenkins 역방향 접근이 없어 Webhook(A) 대신 폴링 사용.
   Jenkins→GitServer 방향은 이미 열려 있어 폴링만으로 "push → 자동 빌드"가 성립한다.
-- 폐쇄망 시뮬레이션에서 Docker Hub(alpine pull) 및 ECR(push) 은 실제 배포 시 사내 레지스트리/ECR 로 대체된다.
+- 폐쇄망 시뮬레이션에서 Docker Hub(alpine pull) 및 NCR(push) 은 실제 배포 시 사내 레지스트리/NCR 로 대체된다.
 
 ---
 
@@ -67,7 +67,7 @@ mkdir -p apps/test-app
 cat > apps/test-app/values.yaml <<'YML'
 # ArgoCD 가 감시하는 config-repo — Jenkins(CI)가 빌드 후 image.tag 를 갱신·커밋.
 image:
-  repository: test-app        # 실제로는 <ECR>/test-app
+  repository: test-app        # 실제로는 <NCR_REGISTRY_HOST>/acme-poc/test-app
   tag: "init"                 # ← CI 가 b<빌드번호>-<소스SHA> 로 갱신
 YML
 git add . && git commit -m "init config-repo" && git push origin main
@@ -284,7 +284,7 @@ ssh acme-git "cd /home/ubuntu/GitServer && curl -s --cacert certs/server.crt -u 
   'https://localhost/api/v1/repos/admin/config-repo/contents/apps/test-app/values.yaml?ref=main' \
   | grep -o '\"content\":\"[^\"]*\"' | cut -d'\"' -f4 | base64 -d"
 ```
-기대: `image.tag` 가 `b<빌드번호>-<소스SHA>` 로 바뀜 → 추후 ArgoCD 가 이 커밋을 감지해 EKS 롤아웃.
+기대: `image.tag` 가 `b<빌드번호>-<소스SHA>` 로 바뀜 → 추후 ArgoCD 가 이 커밋을 감지해 NKS 롤아웃.
 > 태그에 소스 SHA 를 넣어 **어떤 커밋이 어떤 이미지가 됐는지 추적**된다. 새 커밋마다 태그가 바뀌므로 변경도 보장.
 
 ---

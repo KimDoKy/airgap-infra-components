@@ -25,8 +25,8 @@ echo "===== [3] 이미지 검증 (Nexus 패키지 포함 확인) ====="
 docker run --rm test-app:${TAG} | tee /tmp/out.txt
 grep -q "acme build dependency" /tmp/out.txt && echo "NEXUS 패키지 포함 확인 OK"
 
-echo "===== [4] ECR push (테스트 생략/표기만) ====="
-echo "ECR push skip — 실제: pipeline/scripts/20-ecr-login-push.sh"
+echo "===== [4] NCR push (테스트 생략/표기만) ====="
+echo "NCR push skip — 실제: pipeline/scripts/20-ncr-login-push.sh"
 
 echo "===== [5] config-repo 업데이트 (GitServer) — ArgoCD 감시 대상 ====="
 cd /var/jenkins_home

@@ -1,25 +1,9 @@
-# argo-cd Helm 차트 values (폐쇄망 EKS 설치용). 차트: argo/argo-cd
-# 폐쇄망: ArgoCD 컴포넌트 이미지(argocd/redis/dex)를 ECR 로 미러링하고 레지스트리를 override.
+# argo-cd Helm 차트 values (NKS 설치용). 차트: argo/argo-cd
+# NKS 는 인터넷 egress 로 ArgoCD 컴포넌트 이미지(argocd/redis/dex)를 공개 레지스트리에서 직접 pull
+#   → 별도 미러/override 불필요. (앱 이미지는 NCR — 네임스페이스의 ncr-cred imagePullSecret 으로 pull.)
 global:
-  image:
-    repository: "<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/argoproj/argocd"  # 미러
-    tag: "v2.12.4"            # 사용할 ArgoCD 버전에 맞춤
-# redis/dex 등 서브차트 이미지도 각각 ECR 미러로 override 필요:
-redis:
-  image: { repository: "<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/library/redis", tag: "7.2-alpine" }
-dex:
-  enabled: false             # 외부 IdP 미사용(POC). 필요 시 켜고 dex 이미지도 미러
-
+  nodeSelector: { env: ops }        # 플랫폼 노드(taint 없음)에 배치
 configs:
   params:
-    server.insecure: true    # 앞단에서 TLS 종료한다고 가정(직접 노출 시 false + certs)
-  cm:
-    # (선택) Gitea 자체서명 CA 신뢰가 필요하면 tls.certificates 에 등록
-    timeout.reconciliation: 180s
-
-# 컨트롤러/서버 리소스는 클러스터 규모에 맞게 조정
-controller:
-  replicas: 1
-server:
-  replicas: 1
-  # service.type: ClusterIP  # 접근은 kubectl port-forward 또는 내부 ingress (GUI 없이 CLI 위주)
+    server.insecure: true           # Ingress 에서 TLS 종료(nks/scripts/07-expose-argocd.sh)
+# RBAC/계정은 argocd-rbac-cm.yaml + argocd-cm(accounts) 참고. prd 는 수동 Sync(releasemgr).

@@ -100,6 +100,6 @@ git clone acme-gitea:admin/<repo>.git      # clone/push/pull 동작 확인
 
 - 사용자 온보딩·계정/저장소 관리·백업 → `ADMIN.md`
 - 사용자 clone/push/pull → `USER.md`
-- 동작 테스트 스크립트 → `Test/test-commands.sh`
+- 동작 테스트 → 4절 검증(`git clone acme-gitea:admin/<repo>.git` clone/push/pull)
 - SSH 호스트 포트를 22→다른 포트로 바꿀 경우: SG 규칙 + 사용자 config 의 `ProxyCommand -p` +
   `gitgw` 강제명령의 `-p` 만 갱신(Gitea 내부 2222는 불변).

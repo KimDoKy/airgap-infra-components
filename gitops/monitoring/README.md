@@ -9,9 +9,9 @@ NKS `infra` 노드에 kube-prometheus-stack(helm)을 올리고, **ingress-nginx 
 
 | 컴포넌트 | 배치 | 외부 접근 | 인증 |
 |---|---|---|---|
-| Grafana | infra 노드 | `https://grafana.<LB_IP>.nip.io` | **Grafana 자체 로그인**(admin) |
-| Prometheus | infra 노드 | `https://prometheus.<LB_IP>.nip.io` | **ingress basic-auth**(oncall) |
-| ingress-nginx | infra 노드 | LoadBalancer 공인 IP `<LB_IP>` | — |
+| Grafana | ops 노드 | `https://grafana.<LB_IP>.nip.io` | **Grafana 자체 로그인**(admin) |
+| Prometheus | ops 노드 | `https://prometheus.<LB_IP>.nip.io` | **ingress basic-auth**(oncall) |
+| ingress-nginx | ops 노드 | LoadBalancer 공인 IP `<LB_IP>` | — |
 | node-exporter | 전 노드(DS) | — | — |
 
 - `<LB_IP>` 확인: `kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'`
@@ -27,15 +27,15 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm upgrade --install kps prometheus-community/kube-prometheus-stack \
   -n monitoring --create-namespace -f values.yaml   # values.yaml 의 <GRAFANA_PW>,<LB_IP> 치환
 ```
-- `values.yaml`: prometheus/grafana/ksm/operator 는 `nodeSelector role=infra`, node-exporter 는 전 노드
+- `values.yaml`: prometheus/grafana/ksm/operator 는 `nodeSelector env=ops`, node-exporter 는 전 노드
   (`tolerations:[{operator:Exists}]`), alertmanager 비활성, Prometheus emptyDir(기본 SC 없음).
 
 ### 2) Ingress 컨트롤러 (LoadBalancer)
 ```bash
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
-  --set controller.nodeSelector.role=infra \
-  --set controller.admissionWebhooks.patch.nodeSelector.role=infra \
+  --set controller.nodeSelector.env=ops \
+  --set controller.admissionWebhooks.patch.nodeSelector.env=ops \
   --set controller.service.type=LoadBalancer
 # 공인 IP 발급 확인(수십 초~수 분):
 kubectl get svc -n ingress-nginx ingress-nginx-controller -w

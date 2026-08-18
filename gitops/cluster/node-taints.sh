@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
-# 노드에 role/env label + taint 적용 (멱등). NHN NKS·EKS 공통 폴백.
-#   label → helm nodeSelector 매칭 / taint → 대응 toleration 없는 pod 배제(환경 격리)
-#
-# 권장: 노드풀(NKS)/노드그룹(EKS) 정의에 label·taint 를 선언하면 노드 교체/오토스케일에도 유지된다.
-#   - NKS  : 노드풀 생성 시 label 지정(+ 지원 시 taint). 미지원이면 이 스크립트로 taint 적용. (nodepools.nks.md)
-#   - EKS  : nodegroups.eksctl.yaml 참고.
-# 이 스크립트는 "이미 떠 있는 노드"에 명령형으로 거는 폴백이며, 노드가 바뀌면 다시 실행해야 한다.
+# [폴백] 이미 떠 있는 노드에 env label + taint 적용 (멱등). ops=라벨만(무-taint), dev/prd=taint(앱 격리).
+#   활성 경로는 nks/scripts/01-label-taint-nodes.sh (권장). 이 스크립트는 명령형 폴백 — 노드 교체 시 재실행.
+#   NKS: 노드풀 생성 시 label 미리 지정(+ 지원 시 dev/prd taint). (nodepools.nks.md)
+#   (참고: gitops/cluster/nodegroups.eksctl.yaml 은 과거 EKS 검토용 레거시.)
 set -euo pipefail
 
-# 역할 → 적용할 label/taint key=value (테스트 클러스터: infra/dev/prd 3노드)
-declare -A ROLE_KV=( [infra]="role=infra" [dev]="env=dev" [prd]="env=prd" )
+# 역할 → 적용할 label/taint key=value (ops=플랫폼(무-taint), dev/prd=앱(taint))
+declare -A ROLE_KV=( [ops]="env=ops" [dev]="env=dev" [prd]="env=prd" )
 # 노드 선택: (label) 이미 걸린 label 로 선택 / 못 찾으면 (name) 노드풀명 접두어로 폴백 선택
 SELECT_BY="${SELECT_BY:-label}"
-declare -A POOL_PREFIX=( [infra]="acme-infra" [dev]="acme-dev" [prd]="acme-prd" )
+declare -A POOL_PREFIX=( [ops]="acme-ops" [dev]="acme-dev" [prd]="acme-prd" )
 
 apply() {
   local role="$1" kv="${ROLE_KV[$1]}"
@@ -26,9 +23,15 @@ apply() {
   fi
   for N in $nodes; do
     kubectl label "$N" "${key}=${val}" --overwrite
-    kubectl taint "$N" "${key}=${val}:NoSchedule" --overwrite
-    echo ">> ${role}: ${N} <- label/taint ${key}=${val}"
+    if [ "$role" = "ops" ]; then
+      # ops = 플랫폼 노드: 라벨만(taint 없음). 혹시 남은 taint 는 제거.
+      kubectl taint "$N" "${key}=${val}:NoSchedule" - >/dev/null 2>&1 || true
+      echo ">> ${role}: ${N} <- label ${key}=${val} (taint 없음)"
+    else
+      kubectl taint "$N" "${key}=${val}:NoSchedule" --overwrite   # 앱 격리
+      echo ">> ${role}: ${N} <- label+taint ${key}=${val}"
+    fi
   done
 }
 
-for R in infra dev prd; do apply "$R"; done
+for R in ops dev prd; do apply "$R"; done

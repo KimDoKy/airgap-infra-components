@@ -1,7 +1,8 @@
 # Jenkins 구축 가이드 (서버 구축자)
 
 폐쇄망 VM(`acme-cicd`=<CICD_IP>, bastion 뒤)에 Jenkins(**CI 서버**)를 Docker 로 올리고, 파이프라인
-자산을 오프라인 반입하는 절차. GUI 없이(JCasC), AWS 는 CLI 없이(ECR 인증만 REST). **배포는 ArgoCD** 담당.
+자산을 오프라인 반입하는 절차. GUI 없이(JCasC), 이미지 레지스트리는 **NCR**(`docker login` basic).
+**배포(NKS)는 ArgoCD** 담당.
 
 ## 0. 사전 조건
 
@@ -11,9 +12,9 @@
   | 흐름 | 규칙 | 용도 |
   |---|---|---|
   | Jenkins→Nexus | `cicd → nexus(<NEXUS_IP>):443` | npm 의존성 |
-  | Jenkins→Gitea | `cicd → gitea(<GITEA_IP>):2222` | app clone + 폴링 + **GitOps repo push** |
-  | Jenkins→AWS | **ECR**/S3 **VPC 엔드포인트** | ECR push(인터넷 없이). EKS/STS 는 불필요(ArgoCD 담당) |
-  > webhook 미사용(폴링)이라 `gitea→cicd` 인바운드는 **불필요**. 배포용 EKS 접근도 Jenkins 엔 **없음**.
+  | Jenkins→Gitea | `cicd → gitea(<GITEA_IP>):2222` | app clone + 폴링 + **config-repo push** |
+  | Jenkins→NCR | `cicd → NCR:443` (**인터넷 egress**, SG 불필요) | 이미지 push(docker login basic) |
+  > webhook 미사용(폴링)이라 `gitea→cicd` 인바운드는 **불필요**. 배포용 NKS 접근도 Jenkins 엔 **없음**(ArgoCD 담당).
 
 ## 1. 설정 (`.env`) — 이미 cicd 대상으로 설정됨
 
@@ -48,21 +49,26 @@ pipeline/scripts/12-transfer-pipeline.sh          # pipeline/ + 이미지 + 플�
 
 # [VM] DooD + JCasC 활성화 오버라이드 적용 후 재기동
 cp pipeline/docker-compose.override.yml docker-compose.override.yml
+# JCasC 가 nexus-ci + ncr-cred + gitea-ssh 자격을 만들도록 비밀을 env 로 주입(파일 평문 금지)
 export NEXUS_CI_USER=ci NEXUS_CI_PASSWORD='...' GITEA_SSH_PRIVATE_KEY="$(cat key)"
+export NCR_ACCESS_KEY='...' NCR_SECRET_KEY='...'    # NHN NCR access/secret (Jenkins/.ncr 참고)
 docker compose up -d                               # docker.sock 마운트 + JCasC 로 Job/자격 생성
 ```
 > `docker-compose.override.yml` 의 `group_add` GID 는 VM 의 `getent group docker` 값으로 조정.
 > **플러그인은 `plugins/` 에 .jpi 를 넣는 것만으로는 안 되고 반드시 재기동해야 로드된다**(`docker compose
 > restart jenkins`). 로드 확인: `curl -s -u admin:<pw> http://localhost:8080/pluginManager/api/json?depth=1 | grep -c shortName`.
+> **NCR 자격(`ncr-cred`)** 은 JCasC(`NCR_ACCESS_KEY`/`NCR_SECRET_KEY` env)로 생성되거나, 별도로
+> `pipeline/scripts/13-create-ncr-credential.sh`(입력 = `Jenkins/.ncr` 3줄: 레지스트리/access/secret)로 생성한다.
 
 ## 4. 검증(연결 후) / 이후
 
 - 상태: `docker ps --filter name=jenkins`, `curl --cacert certs/server.crt https://localhost/login`.
 - Job/자격/플러그인 관리, 앱 저장소 온보딩 → [ADMIN.md](ADMIN.md)
 - 개발자 사용(브랜치→환경, 트리거) → [USER.md](USER.md)
-- ECR placeholder·SigV4·GitOps 커밋 → [pipeline/README.md](pipeline/README.md)
+- NCR 자격(`ncr-cred`)·config-repo 커밋 → [pipeline/README.md](pipeline/README.md)
 - 배포(ArgoCD)·Helm 차트·노드 taint → [gitops/README.md](../gitops/README.md)
 - **CI 연동 end-to-end 실측 검증(hands-on) → [test/test.md](test/test.md)**
-  GitServer(SCM 폴링으로 새 커밋 감지→clone) → 빌드 중 Nexus 패키지 다운로드 → config-repo(GitOps) push
+  GitServer(SCM 폴링으로 새 커밋 감지→clone) → 빌드 중 Nexus 패키지 다운로드 → NCR push → config-repo push
   까지 실제로 통과. 겪은 함정(플러그인 재기동 필요, 코어 버전, REST 생성 잡의 SCMTrigger start)도 정리됨.
-- **ECR/EKS/ArgoCD 미생성 상태의 무검증 스캐폴드** — 연결 후 dev 브랜치로 1회 검증.
+- **NKS 배포 플로우(SG·ArgoCD·환경별 브랜치) 실측 → [gitops/nks-deploy-flow.md](../gitops/nks-deploy-flow.md).**
+  연결 후 dev 브랜치로 1회 검증(CI 가 갱신하는 건 dev 브랜치의 이미지 태그, test/prd 는 승격).

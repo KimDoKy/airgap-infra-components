@@ -23,7 +23,7 @@ pem 없이 **bastion:22 SSH 게이트웨이**로 접근. 관리자에게 **공�
    # 커밋 후
    git push
    ```
-**정상 확인**: clone/push 성공. 실패 시 공개키 등록 여부(관리자)·config 별칭 확인. 상세: [`GitServer/USER.md`].
+**정상 확인**: clone/push 성공. 실패 시 공개키 등록 여부(관리자)·config 별칭 확인. 상세: [`GitServer/USER.md`](GitServer/USER.md).
 
 ## 2. 빌드 / 배포 트리거 (dev 자동)
 
@@ -60,5 +60,5 @@ pem 없이 **bastion:22 SSH 게이트웨이**로 접근. 관리자에게 **공�
 | prd 에 반영 안 됨 | 정상(자동 아님). 승격+수동 Sync 는 릴리스 권한 필요 |
 | 빌드 중 npm 실패 | Nexus 자격/저장소 문제 — 운영자에게 문의 |
 
-- 개발자 상세(Gitea): [`GitServer/USER.md`] · 배포 파이프라인: [`Jenkins/README.md`](Jenkins/README.md)
+- 개발자 상세(Gitea): [`GitServer/USER.md`](GitServer/USER.md) · 배포 파이프라인: [`Jenkins/README.md`](Jenkins/README.md)
 - 운영/승격: [`OPERATOR.md`](OPERATOR.md)

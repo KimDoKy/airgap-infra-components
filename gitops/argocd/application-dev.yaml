@@ -1,4 +1,4 @@
-# ArgoCD Application (dev) — GitOps repo 의 helm/acme-app 를 values-dev.yaml 로 렌더링해 EKS 에 동기화.
+# ArgoCD Application (dev) — GitOps repo 의 helm/acme-app 를 values-dev.yaml 로 렌더링해 NKS 에 동기화.
 # repoURL/targetRevision 은 실제 GitOps repo(Gitea) 로 채우세요. path 는 GitOps repo 루트 기준.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -8,7 +8,7 @@ metadata:
 spec:
   project: acme-dev
   source:
-    repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git   # GitOps repo (Gitea)
+    repoURL: https://<GITEA_IP>/admin/acme-gitops.git   # GitOps repo (Gitea)
     targetRevision: main
     path: helm/acme-app
     helm:

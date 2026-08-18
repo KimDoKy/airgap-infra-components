@@ -94,11 +94,13 @@ VM에서의 상세 트러블슈팅은 [MANUAL.md](MANUAL.md) 를 참고하세요
 
 ## 다음 단계
 
-Docker 설치가 끝나면 각 서비스 디렉터리에서 이미지 로드/기동을 진행하세요.
+Docker 설치가 끝나면 각 서비스 디렉터리에서 이미지 로드/기동을 진행하세요(구축 매뉴얼 = `BUILD.md`).
 
-- [../GitServer/MANUAL.md](../GitServer/MANUAL.md)
-- [../Jenkins/MANUAL.md](../Jenkins/MANUAL.md)
-- [../Nexus/MANUAL.md](../Nexus/MANUAL.md)
+- [../GitServer/BUILD.md](../GitServer/BUILD.md)
+- [../Jenkins/BUILD.md](../Jenkins/BUILD.md)
+- [../Nexus/BUILD.md](../Nexus/BUILD.md)
+
+> 전체 순서 통합본: [../BUILDER.md](../BUILDER.md)
 
 ## 참고 (이번 범위 밖)
 

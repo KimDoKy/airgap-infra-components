@@ -1,15 +1,15 @@
 # Jenkins 사용자 가이드 (개발자)
 
 CI/CD 를 쓰는 개발자용. **GUI 없음** — 코드 push 로 트리거하고, 결과는 CLI 로 확인합니다.
-흐름: Gitea push → (폴링) → **Jenkins(CI)** frontend·backend 빌드(Nexus 의존성) → ECR push →
-GitOps repo 이미지 태그 커밋 → **ArgoCD(CD)** 가 EKS(dev/stg/prd)에 배포.
+흐름: Gitea push → (폴링) → **Jenkins(CI)** frontend·backend 빌드(Nexus 의존성) → NCR push →
+config-repo 이미지 태그 커밋 → **ArgoCD(CD)** 가 NKS(dev/test/prd)에 배포.
 
 ## 1. 앱 저장소 구조
 
-Gitea 저장소(`acme/acme-app`) 루트에 아래가 있어야 파이프라인이 동작합니다(샘플: 레포 `sample-app/`).
+Gitea 저장소(`admin/acme-app`) 루트에 아래가 있어야 파이프라인이 동작합니다(샘플: 레포 `test/sample-app/`).
 ```
 frontend/   backend/          # 각 컴포넌트(Dockerfile 포함)
-Jenkinsfile                   # CI 정의(두 컴포넌트 빌드→ECR→gitops 태그 커밋)
+Jenkinsfile                   # CI 정의(두 컴포넌트 빌드→NCR→config-repo 태그 커밋)
 pipeline/                     # scripts·config·pipeline.env (Jenkins/pipeline/ 복사본)
 ```
 
@@ -20,16 +20,17 @@ Jenkins 가 3분 주기로 변경을 감지합니다(webhook 아님). **브랜�
 | push 대상 | 환경 | 네임스페이스 |
 |---|---|---|
 | `dev` 브랜치 | dev | `acme-app-dev` |
-| `stg` 브랜치 | stg | `acme-app-stg` |
+| `test` 브랜치 | test | `acme-app-test` |
 | `main` 브랜치 또는 태그 `v*` | prd | `acme-app-prd` (ArgoCD 수동 승인) |
 | 그 외 브랜치 | 빌드만(배포 스킵) | — |
 
 ```bash
 git checkout dev && git commit -m "..." && git push origin dev     # → dev 환경으로
 ```
-각 컴포넌트는 `acme-app-frontend` / `acme-app-backend` 이미지로 ECR push 되고, CI 가 **GitOps repo 의
-해당 env 이미지 태그를 커밋**합니다. 이후 **ArgoCD** 가 감지해 해당 env 네임스페이스에 배포합니다(노드는
-`env=<env>` taint 로 물리 분리). prd 는 ArgoCD 에서 수동 Sync 승인.
+각 컴포넌트는 `acme-app-frontend` / `acme-app-backend` 이미지로 NCR push 되고, CI 는 **config-repo 의
+`dev` 브랜치** `apps/test-app/deployment.yaml` 이미지 태그를 커밋합니다. 이후 **ArgoCD** 가 감지해 dev
+네임스페이스에 배포합니다(노드는 `env=<env>` taint 로 물리 분리). test/prd 로의 승격은 별도 절차
+(`tools/promote-image.sh`)이며, **prd 는 ArgoCD 에서 수동 Sync 승인**입니다.
 
 ## 3. 결과 확인 (GUI 없이)
 

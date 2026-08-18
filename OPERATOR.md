@@ -42,7 +42,7 @@ CONFIG_REPO_URL=acme-gitea:admin/config-repo.git ./tools/promote-image.sh prd  <
   (b) ArgoCD RBAC(`releasemgr` 만 prd sync), (c) prd Application 수동 Sync.
 
 **RBAC 계정**: `developer`(dev/test sync), `releasemgr`(prd 포함). 비번 변경:
-`argocd account update-password --account <name> --new-password '<...>'`. 정책: [`gitops/argocd/install/argocd-rbac-cm.yaml`].
+`argocd account update-password --account <name> --new-password '<...>'`. 정책: [`gitops/argocd/install/argocd-rbac-cm.yaml`](gitops/argocd/install/argocd-rbac-cm.yaml).
 
 ## 모니터링 / 온콜
 
@@ -53,7 +53,7 @@ CONFIG_REPO_URL=acme-gitea:admin/config-repo.git ./tools/promote-image.sh prd  <
 ## 노드/스케줄
 
 - taint 는 **앱 배포 격리 전용**(dev/test/prd `NoSchedule`). ops 는 taint 없음(ArgoCD·모니터링·시스템).
-- 노드 추가/교체 시 라벨/taint 재적용: `nks/scripts/01-label-taint-nodes.sh`. 사양: [`gitops/cluster/nodepools.nks.md`].
+- 노드 추가/교체 시 라벨/taint 재적용: `nks/scripts/01-label-taint-nodes.sh`. 사양: [`gitops/cluster/nodepools.nks.md`](gitops/cluster/nodepools.nks.md).
 
 ## 백업 / 업그레이드
 

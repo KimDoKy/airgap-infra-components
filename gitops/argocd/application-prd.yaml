@@ -7,7 +7,7 @@ metadata:
 spec:
   project: acme-prd
   source:
-    repoURL: ssh://git@<GITEA_IP>:2222/acme/acme-gitops.git
+    repoURL: https://<GITEA_IP>/admin/acme-gitops.git
     targetRevision: main
     path: helm/acme-app
     helm:

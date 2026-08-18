@@ -67,7 +67,7 @@ cd GitServer
 - `curl -k https://localhost/ -o /dev/null -w '%{http_code}\n'` → **200**.
 
 이어서 **SSH 게이트웨이**(사용자가 pem 없이 bastion:22 로 clone) 구축 — `gitfwd`(VM)/`gitgw`(bastion) 계정 +
-`tunnel_key`. 상세·검증: [`GitServer/BUILD.md`](GitServer/BUILD.md) **3~4절**. 온보딩(키 추가)은 [`GitServer/ADMIN.md`].
+`tunnel_key`. 상세·검증: [`GitServer/BUILD.md`](GitServer/BUILD.md) **3~4절**. 온보딩(키 추가)은 [`GitServer/ADMIN.md`](GitServer/ADMIN.md).
 
 > config-repo·test-app 저장소는 5절(NKS/CI)에서 생성한다(Gitea API 또는 UI).
 
@@ -90,7 +90,7 @@ cd Nexus
 - `06-configure.sh` 후: 익명 접근 차단(`anon http=401`), `raw-hosted`·`npm` 저장소 생성됨.
 - `curl -k -u admin:<pw> https://localhost/service/rest/v1/repositories` 에 `raw-hosted`/npm 표시.
 
-패키지 업로드 검증(bastion 경유): [`Nexus/Test.md`](Nexus/Test.md). 계정/저장소 운영: [`Nexus/ADMIN.md`].
+패키지 업로드 검증(bastion 경유): [`Nexus/Test.md`](Nexus/Test.md). 계정/저장소 운영: [`Nexus/ADMIN.md`](Nexus/ADMIN.md).
 
 ---
 
@@ -107,7 +107,7 @@ cd Jenkins
 ./scripts/05-start.sh                 # 설치마법사 없이 init.groovy 로 admin 생성
 ```
 **정상 확인**: `docker ps` 에 `jenkins`, `jenkins-nginx` **Up**. `curl -k https://localhost/login` → **200**.
-> ⚠ 코어 **≥ 2.504.3** 필수(구 2.479.2 는 git/파이프라인 플러그인 미로드). 상세: [`Jenkins/BUILD.md`] §1 경고.
+> ⚠ 코어 **≥ 2.504.3** 필수(구 2.479.2 는 git/파이프라인 플러그인 미로드). 상세: [`Jenkins/BUILD.md`](Jenkins/BUILD.md) §1 경고.
 
 ### 4-2. CI 파이프라인 자산 반입 + 배선
 ```bash
