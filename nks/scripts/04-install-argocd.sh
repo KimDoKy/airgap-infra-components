@@ -12,6 +12,23 @@ helm repo update >/dev/null 2>&1
 OV="$(mktemp)"; cat > "$OV" <<YAML
 global:
   nodeSelector: { ${ENV_KEY}: ops }   # ops 는 taint 없음 → toleration 불필요
+configs:
+  cm:
+    accounts.developer: apiKey,login
+    accounts.releasemgr: apiKey,login
+  rbac:
+    policy.default: role:readonly            # 미지정 사용자는 읽기만(sync 불가)
+    scopes: '[groups]'
+    policy.csv: |
+      p, role:developer, applications, get, */*, allow
+      p, role:developer, applications, sync, acme-dev/*, allow
+      p, role:developer, applications, sync, acme-test/*, allow
+      p, role:release-manager, applications, get, */*, allow
+      p, role:release-manager, applications, sync, acme-dev/*, allow
+      p, role:release-manager, applications, sync, acme-test/*, allow
+      p, role:release-manager, applications, sync, acme-prd/*, allow
+      g, developer, role:developer
+      g, releasemgr, role:release-manager
 YAML
 echo ">> ArgoCD 설치/업그레이드..."
 helm upgrade --install argocd argo/argo-cd -n argocd --create-namespace -f "$OV" >/dev/null
@@ -62,3 +79,8 @@ YAML
 done
 echo ">> ArgoCD admin 초기비번:"
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d 2>/dev/null; echo
+echo ">> RBAC 계정(developer/releasemgr) 비밀번호는 설치 후 설정 필요(헬름은 비번 미설정):"
+echo "   argocd login <서버> --username admin --password <admin초기비번>"
+echo "   argocd account update-password --account developer  --new-password '<비번>'"
+echo "   argocd account update-password --account releasemgr  --new-password '<비번>'"
+echo "   (developer=dev/test sync, releasemgr=prd 포함 sync, 그 외 readonly)"

@@ -10,6 +10,7 @@ ArgoCD 는 **EKS 클러스터 내부**에 설치되어 클러스터 RBAC 로 배
 | `namespace.yaml` | `argocd` 네임스페이스 | 부트스트랩 1회 |
 | `values-argocd.yaml` | argo-cd Helm 차트 values (이미지 ECR 미러 override, dex off) | ArgoCD 설치 |
 | `../projects/appproject-*.yaml` | env AppProject(acme-dev/test/prd, prd 수동 sync) | 부트스트랩 1회 |
+| `argocd-rbac-cm.yaml` | RBAC(developer=dev/test sync, releasemgr=prd sync, 그 외 readonly) | 부트스트랩 1회 |
 | `repo-secret.yaml` | GitOps repo(Gitea) 접근 SSH 키 Secret | 부트스트랩 1회 |
 | `app-of-apps.yaml` | `acme-apps` — argocd/ 의 env Application 들을 GitOps 로 자기관리 | 부트스트랩 1회 |
 
@@ -27,6 +28,11 @@ helm install argocd ./argo-cd-<ver>.tgz -n argocd -f values-argocd.yaml
 
 # 2) AppProject + GitOps repo 자격
 kubectl apply -f ../projects/     # env AppProjects (acme-dev/test/prd; GITEA_REPO_URL 치환 후)
+kubectl apply -f argocd-rbac-cm.yaml                                   # RBAC 정책
+kubectl -n argocd patch cm argocd-cm --type merge \
+  -p '{"data":{"accounts.developer":"apiKey,login","accounts.releasemgr":"apiKey,login"}}'   # 로컬 계정
+kubectl -n argocd rollout restart deploy/argocd-server                 # 계정/정책 반영
+# 비번 설정: argocd account update-password --account developer|releasemgr --new-password '<...>'
 #    repo SSH 키는 파일 평문 대신 명령으로 주입(권장):
 kubectl -n argocd create secret generic acme-gitops-repo \
   --from-literal=type=git \
